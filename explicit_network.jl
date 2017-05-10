@@ -7,6 +7,11 @@ using CDDLib
 immutable Net{T}
     coefficients::Vector{Matrix{T}}
     biases::Vector{Vector{T}}
+
+    function (::Type{Net{T}}){T}(c::Vector, b::Vector)
+        @assert(length(c) == length(b))
+        new{T}(c, b)
+    end
 end
 
 Net{T1, T2}(c::Vector{Matrix{T1}}, b::Vector{Vector{T2}}) = Net{promote_type(T1, T2)}(c, b)
@@ -29,7 +34,7 @@ function feedforward{T}(n::Net{T}, x::Vector, relu_activations=nothing)
             current_layer .*= relu_activations[j_relu:(j_relu + length(current_layer) - 1)]
         end
     end
-    append!(result, n.coefficients[end]' * current_layer)
+    append!(result, n.coefficients[end]' * current_layer .+ n.biases[end])
     result
 end
 
@@ -70,22 +75,31 @@ function explore{T}(net::Net{T}, bounds, start::Vector)
     constr = relu_constraints(net, state)
     results = Dict{typeof(state), typeof(constr)}()
 
-    active_set = [state]
+    active_set = Set([state])
 
     while !isempty(active_set)
-        new_active_set = Vector{typeof(state)}()
+        new_active_set = Set{typeof(state)}()
         for state in active_set
             constr = relu_constraints(net, state)
             p = intersect(constr, bounds)
+            if isempty(SimpleVRepresentation(vrep(polyhedron(p, CDDLibrary()))).V)
+                continue
+            end
+            # if isempty(polyhedron(p, CDDLibrary()), CDDSolver())
+            #     continue
+            # end
             results[state] = p
+            if length(results) % 100 == 0
+                @show length(results)
+            end
             for i in 1:(length(p) - length(bounds))
-                if !redundant(p, i)[1]
+                # if !sredundant(p, i)[1]
                     newstate = copy(state)
                     newstate[i] = !newstate[i]
                     if !haskey(results, newstate)
                         push!(new_active_set, newstate)
                     end
-                end
+                # end
             end
         end
         active_set = new_active_set
