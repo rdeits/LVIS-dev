@@ -19,6 +19,18 @@ Net{T1, T2}(c::Vector{Matrix{T1}}, b::Vector{Vector{T2}}) = Net{promote_type(T1,
 num_inputs(n::Net) = size(n.coefficients[1], 1)
 num_outputs(n::Net) = size(n.coefficients[end], 2)
 
+function remove_small_weights!(net::Net, threshold=1e-16)
+    for weights in [net.coefficients, net.biases]
+        for layer in weights
+            for i in 1:length(layer)
+                if abs(layer[i]) < threshold
+                    layer[i] = 0
+                end
+            end
+        end
+    end
+end
+
 function feedforward{T}(n::Net{T}, x::Vector, relu_activations=nothing)
     R = promote_type(T, eltype(x))
     result = Vector{R}()
@@ -32,6 +44,7 @@ function feedforward{T}(n::Net{T}, x::Vector, relu_activations=nothing)
             current_layer .*= current_layer .>= 0
         else
             current_layer .*= relu_activations[j_relu:(j_relu + length(current_layer) - 1)]
+            j_relu += length(current_layer)
         end
     end
     append!(result, n.coefficients[end]' * current_layer .+ n.biases[end])
@@ -82,16 +95,13 @@ function explore{T}(net::Net{T}, bounds, start::Vector)
         for state in active_set
             constr = relu_constraints(net, state)
             p = intersect(constr, bounds)
-            if isempty(SimpleVRepresentation(vrep(polyhedron(p, CDDLibrary()))).V)
+            if isempty(SimpleVRepresentation(vrep(polyhedron(p, CDDLibrary(:exact)))).V)
                 continue
             end
             # if isempty(polyhedron(p, CDDLibrary()), CDDSolver())
             #     continue
             # end
             results[state] = p
-            if length(results) % 100 == 0
-                @show length(results)
-            end
             for i in 1:(length(p) - length(bounds))
                 # if !sredundant(p, i)[1]
                     newstate = copy(state)

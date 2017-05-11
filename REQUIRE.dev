@@ -6,3 +6,5 @@ Gurobi
 Polyhedra
 ForwardDiff
 CDDLib
+MLDataPattern
+git@github.com:dmlc/MXNet.jl.git 4cd5f3fe26bfacca9470fe696002a658b68b0695
