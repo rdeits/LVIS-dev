@@ -41,9 +41,10 @@ function feedforward{T}(n::Net{T}, x::Vector, relu_activations=nothing)
         current_layer .+= n.biases[i]
         append!(result, current_layer)
         if typeof(relu_activations) === Void
-            current_layer .*= current_layer .>= 0
+            current_layer .= (x -> x >= 0 ? x : 0.1 * x).(current_layer)
         else
-            current_layer .*= relu_activations[j_relu:(j_relu + length(current_layer) - 1)]
+            current_layer .= ((active, y) -> active ? y : 0.1 * y).(relu_activations[j_relu:(j_relu + length(current_layer) - 1)], current_layer)
+            # current_layer .*= relu_activations[j_relu:(j_relu + length(current_layer) - 1)]
             j_relu += length(current_layer)
         end
     end
