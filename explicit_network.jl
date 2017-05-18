@@ -31,6 +31,8 @@ function remove_small_weights!(net::Net, threshold=1e-16)
     end
 end
 
+leaky_relu(slope) = (input, active=input >= 0) -> active ? input : slope * input
+
 function feedforward{T}(n::Net{T}, x::Vector, relu_activations=nothing)
     R = promote_type(T, eltype(x))
     result = Vector{R}()
@@ -41,10 +43,9 @@ function feedforward{T}(n::Net{T}, x::Vector, relu_activations=nothing)
         current_layer .+= n.biases[i]
         append!(result, current_layer)
         if typeof(relu_activations) === Void
-            current_layer .= (x -> x >= 0 ? x : 0.1 * x).(current_layer)
+            current_layer .= leaky_relu(0.1).(current_layer)
         else
-            current_layer .= ((active, y) -> active ? y : 0.1 * y).(relu_activations[j_relu:(j_relu + length(current_layer) - 1)], current_layer)
-            # current_layer .*= relu_activations[j_relu:(j_relu + length(current_layer) - 1)]
+            current_layer .= leaky_relu(0.1).(current_layer, relu_activations[j_relu:(j_relu + length(current_layer) - 1)])
             j_relu += length(current_layer)
         end
     end
