@@ -26,7 +26,7 @@ function solve_qp(qp::PyObject, x::AbstractVector)
     
     m = Model(solver=GurobiSolver(OutputFlag=0))
     @variable m z[1:size(G, 2)]
-    @objective m Min (z' * H * z)[1]
+    @objective m Min (z' * H * z)
     @constraint m constrs G * z .<= S * x + W
     status = solve(m, suppress_warnings=true)
     if status == :Optimal
@@ -36,9 +36,9 @@ function solve_qp(qp::PyObject, x::AbstractVector)
         G_A = G[active_set, :]
         W_A = W[active_set, :]
         S_A = S[active_set, :]
-        G_I = G[!active_set, :]
-        W_I = W[!active_set, :]
-        S_I = S[!active_set, :]
+        G_I = G[.!(active_set), :]
+        W_I = W[.!(active_set), :]
+        S_I = S[.!(active_set), :]
         H_A = inv(G_A * H_inv * G_A')
 
         lambda_A_offset = -H_A * W_A

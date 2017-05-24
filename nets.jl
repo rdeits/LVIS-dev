@@ -59,21 +59,21 @@ end
 @with_kw type SGDOpts
     learning_rate::Float64 = 0.01
     momentum::Float64 = 0.0
-    batchsize::Int = 1
+    batch_size::Int = 1
     learning_decay = 1.0
 end
 
 function sgd!(loss, params, data, opts::SGDOpts=SGDOpts())
     last_descent = zeros(params)
     dw = zeros(params)
-    sample_weight = 1 / opts.batchsize
+    sample_weight = 1 / opts.batch_size
     n_in = length(data[1][1])
     n_out = length(data[1][2])
     loss_tape = ReverseDiff.compile(ReverseDiff.GradientTape(loss, 
         (params, randn(n_in), randn(n_out))))
     gradient_result = (similar(params), zeros(n_in), zeros(n_out))
     learning_rate = opts.learning_rate
-    for batch in batchview(shuffleobs(data), opts.batchsize)
+    for batch in batchview(shuffleobs(data), opts.batch_size)
         dw .= 0
         for (x, y) in batch
             ReverseDiff.gradient!(gradient_result, loss_tape, (params, x, y))
