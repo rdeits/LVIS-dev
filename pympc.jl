@@ -56,4 +56,50 @@ function solve_qp(qp::PyObject, x::AbstractVector)
     end
 end
 
+using Base.Test
+
+@testset "test sensitivity" begin
+    mass = 1.
+    l = 1.
+    g = 10.
+    N = 4
+    A = [0. 1.;
+         g/l 0.]
+    B = [0 1/(mass*l^2.)]'
+    Δt = .1
+    pysys = PyMPC.dynamical_systems.DTLinearSystem[:from_continuous](A, B, Δt)
+
+    x_max = [pi/6, pi/20/(N*Δt)]
+    x_min = -x_max
+    u_max = [mass*g*l*pi/8.]
+    u_min = -u_max
+    times = 0:Δt:N*Δt
+
+    Q = 10 * eye(2)
+    R = eye(1)
+
+    X_bounds = PyMPC.geometry.Polytope[:from_bounds](reshape(x_min, 2, 1), reshape(x_max, 2, 1))[:assemble]()
+    U_bounds = PyMPC.geometry.Polytope[:from_bounds](reshape(u_min, 1, 1), reshape(u_max, 1, 1))[:assemble]()
+    controller = PyMPC.control.MPCController(pysys, N, "two", Q, R, X=X_bounds, U=U_bounds)
+
+    qp = controller[:condensed_program]
+
+    srand(1)
+    for i in 1:100
+        x = x_min + rand(length(x_min)) .* (x_max - x_min)
+        status, u, J = PyMPC.solve_qp(qp, x)
+        if status == :Optimal
+            @test isapprox(u, controller[:feedforward](x)[1], atol=1e-5)
+            for i in 1:length(x)
+                delta = zeros(x)
+                delta[i] += 1e-3
+                x2 = x .+ delta
+                s2, u2, J2 = PyMPC.solve_qp(qp, x2)
+                @test isapprox(u2, u + J * delta, atol=1e-5)
+            end
+        end
+    end
+end
+
+
 end
