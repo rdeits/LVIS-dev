@@ -62,7 +62,7 @@ function predict_sensitivity(params::Params, x::AbstractVector)
         y = params.weights[i] * y + params.biases[i]
         J = params.weights[i] * J
     end
-    vcat(vec(y), vec(J))
+    hcat(y, J)
 end
 
 predict(net::Net, params::AbstractVector, x::AbstractVector) = 
@@ -74,7 +74,7 @@ function predict(params::Params, x::AbstractVector)
         y = leaky_relu.(y)
         y = params.weights[i] * y + params.biases[i]
     end
-    vec(y)
+    y
 end
 
 leaky_relu(y, active::Bool) = active ? y : 0.1 * y
@@ -207,8 +207,8 @@ using Base.Test
 
         dx = [1e-3]
         y = predict_sensitivity(net, params, x)
-        J = y[2:2]
-        @test predict(net, params, x .+ dx) ≈ y[1:1] .+ J .* dx
+        J = y[:, 2:end]
+        @test predict(net, params, x .+ dx) ≈ y[:,1] .+ J * dx
     end
 end
 
@@ -224,8 +224,8 @@ end
             dx = zeros(x)
             dx[i] = 1e-3
             out = predict_sensitivity(net, params, x)
-            y = out[1:widths[end]]
-            J = reshape(out[widths[end]+1:end], widths[end], length(x))
+            y = out[:, 1]
+            J = out[:, 2:end]
             @test predict(net, params, x .+ dx) ≈ y .+ J * dx
         end
     end
