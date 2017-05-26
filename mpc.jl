@@ -58,6 +58,8 @@ immutable MPCModel
     u::Array{Variable, 2}
 end
 
+
+
 function MPCModel(sys::DTLinearSystem, N::Integer;
                   Q=eye(num_states(sys)), 
                   R=eye(num_inputs(sys)), 
@@ -69,7 +71,7 @@ function MPCModel(sys::DTLinearSystem, N::Integer;
     for j = 1:N
         @constraint model x[:, j+1] .== update(sys, times[j], x[:, j], u[:, j])
     end
-    @objective model Min sum((x[:, i]' * Q * x[:, i])[1] for i in 2:N+1) + sum((u[:, i]' * R * u[:, i])[1] for i in 1:N)
+    @objective model Min sum(first(x[:, i]' * Q * x[:, i]) for i in 2:N+1) + sum(first(u[:, i]' * R * u[:, i]) for i in 1:N)
     MPCModel(model, times, x, u)
 end 
 
