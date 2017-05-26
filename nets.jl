@@ -171,11 +171,11 @@ function sgd!(loss, params, data, opts::SGDOpts=SGDOpts())
     last_descent = zeros(params)
     dw = zeros(params)
     sample_weight = 1 / opts.batch_size
-    n_in = length(data[1][1])
-    n_out = length(data[1][2])
+    sz_in = size(data[1][1])
+    sz_out = size(data[1][2])
     loss_tape = ReverseDiff.compile(ReverseDiff.GradientTape(loss, 
-        (params, randn(n_in), randn(n_out))))
-    gradient_result = (similar(params), zeros(n_in), zeros(n_out))
+        (params, randn(sz_in), randn(sz_out))))
+    gradient_result = (similar(params), zeros(sz_in), zeros(sz_out))
     learning_rate = opts.learning_rate
     for batch in batchview(shuffleobs(data), opts.batch_size)
         dw .= 0
