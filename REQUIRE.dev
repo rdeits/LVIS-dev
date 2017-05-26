@@ -3,3 +3,4 @@ git@github.com:rdeits/ReverseDiff.jl.git d23ba5e9c482478f77584e47d5ddeb179b0a4ec
 git@github.com:rdeits/Polyhedra.jl.git 8f2eb01294c83382a38c4bdebc2eb97365d1d2bf
 git@github.com:JuliaPolyhedra/QHull.jl.git 87702e5e9ddcb5a8d19d65112dc48bd310215477
 git@github.com:JuliaGeometry/GeometryTypes.jl.git 2df57243de3c8b702d97ec8ee6c062a3a2a76b8c
+git@github.com:JuliaPlots/Plots.jl.git 76186cab970bba8e97c1a0c84086484b3fd52709
