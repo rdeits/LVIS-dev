@@ -1,12 +1,5 @@
-IJulia
-Plots
-PyPlot
-JuMP
-Gurobi
-Polyhedra
-ForwardDiff
-ReverseDiff
-Parameters
-CDDLib
-MLDataPattern
-git@github.com:dmlc/MXNet.jl.git 4cd5f3fe26bfacca9470fe696002a658b68b0695
+git@github.com:yuyichao/FunctionWrappers.jl 2c8eb80bab1336b05ee0d846c97c5f758280b4eb
+git@github.com:rdeits/ReverseDiff.jl.git d23ba5e9c482478f77584e47d5ddeb179b0a4ec5
+git@github.com:rdeits/Polyhedra.jl.git 8f2eb01294c83382a38c4bdebc2eb97365d1d2bf
+git@github.com:JuliaPolyhedra/QHull.jl.git 87702e5e9ddcb5a8d19d65112dc48bd310215477
+git@github.com:JuliaGeometry/GeometryTypes.jl.git 2df57243de3c8b702d97ec8ee6c062a3a2a76b8c
