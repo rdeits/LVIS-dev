@@ -1,5 +1,4 @@
-git@github.com:yuyichao/FunctionWrappers.jl 2c8eb80bab1336b05ee0d846c97c5f758280b4eb
-git@github.com:rdeits/ReverseDiff.jl.git d23ba5e9c482478f77584e47d5ddeb179b0a4ec5
+git@github.com:JuliaDiff/ReverseDiff.jl.git 820690c8efde8e71e1a7868949f7e703de144e03
 git@github.com:rdeits/Polyhedra.jl.git 8f2eb01294c83382a38c4bdebc2eb97365d1d2bf
 git@github.com:JuliaPolyhedra/QHull.jl.git 87702e5e9ddcb5a8d19d65112dc48bd310215477
 git@github.com:JuliaGeometry/GeometryTypes.jl.git 60a9a5ebfb8ce530d520c7565ce6117ef5ddf050

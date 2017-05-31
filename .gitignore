@@ -1,5 +1,6 @@
 packages/.cache
 packages/lib
+packages/v0.5
 packages/v0.6/*
 !packages/v0.6/Nets
 !packages/v0.6/REQUIRE

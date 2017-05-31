@@ -1,5 +1,7 @@
 CDDLib 0.1.3
+DrakeVisualizer 0.1.3
 ForwardDiff 0.4.2
+FunctionWrappers 0.1.0
 Gurobi 0.3.2
 IJulia 1.5.0
 JuMP 0.16.2
@@ -9,4 +11,3 @@ Parameters 0.7.2
 ProgressMeter 0.3.4
 PyCall 1.12.0
 PyPlot 2.3.2
-DrakeVisualizer 0.1.3
