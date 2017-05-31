@@ -9,3 +9,4 @@ Parameters 0.7.2
 ProgressMeter 0.3.4
 PyCall 1.12.0
 PyPlot 2.3.2
+DrakeVisualizer 0.1.3
