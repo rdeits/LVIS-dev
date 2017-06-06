@@ -8,3 +8,4 @@ git@github.com:JuliaML/StochasticOptimization.jl.git a1b3e42782b0e5179dd1a96371c
 git@github.com:rdeits/DrakeVisualizer.jl.git e8f066c4cfad07c2214823b7daa63be75dbeb984
 git@github.com:rdeits/Meshing.jl.git 37fcf18a444112094fe475adb5f18646e991da0c
 git@github.com:JuliaArrays/StaticArrays.jl.git 0dfe8071abe09ef9145a1d94c746bd29a100fb30
+git@github.com:rdeits/AxisArrayVariables.jl.git 79bcb96d9bbc062dacf21c1a4f74f253ce6bb33c
