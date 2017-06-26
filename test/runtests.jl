@@ -1,6 +1,8 @@
 using Base.Test
 using Nets
+using CoordinateTransformations
 import ReverseDiff
+import ForwardDiff
 
 @testset "feedforward" begin
 widths = [1, 1]
@@ -71,3 +73,25 @@ end
         end
     end
 end
+
+@testset "input output scaling" begin
+    srand(1)
+    for i in 1:10
+        widths = [rand(1:5) for i in 1:4]
+        t_in = AffineMap(randn(widths[1], widths[1]), randn(widths[1]))
+        t_out = AffineMap(randn(widths[end], widths[end]), randn(widths[end]))
+        params = randn(Params{Float64}, widths)
+        net = Net(params, t_in, t_out)
+        for j in 1:10
+            x0 = randn(widths[1])
+            yJ = predict_sensitivity(net, x0)
+            y = yJ[:, 1]
+            J = yJ[:, 2:end]
+            @test predict(net, x0) == y
+
+            @test ForwardDiff.jacobian(net, x0) ≈ J
+        end
+    end
+end
+
+

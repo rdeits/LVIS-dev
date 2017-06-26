@@ -79,8 +79,8 @@ Base.randn(net::Net) = randn(nparams(net))
 
 Base.similar(net::Net, data::AbstractVector) =
     Net(Params(shapes(params(net)), data),
-        net.input_adjust,
-        net.output_adjust)
+        net.input_tform,
+        net.output_tform)
 
 @ReverseDiff.forward leaky_relu(y) = y >= 0 ? y : 0.1 * y
 @ReverseDiff.forward leaky_relu_sensitivity(y, j) = y >= 0 ? j : 0.1 * j
