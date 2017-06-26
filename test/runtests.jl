@@ -3,18 +3,18 @@ using Nets
 import ReverseDiff
 
 @testset "feedforward" begin
-    shapes = [(1, 1), (1, 1)]
-    net = Nets.Net(shapes)
+widths = [1, 1]
     srand(1)
     for i in 1:100
-        params = randn(net)
+        params = randn(Params{Float64}, widths)
+        net = Net(params)
         x = randn(1)
-        @test @inferred(Nets.predict(net, params, x))[1] == @inferred(Nets.predict_sensitivity(net, params, x)[1])
+        @test @inferred(net(x)) == @inferred(predict_sensitivity(net, x)[:, 1])
 
         dx = [1e-3]
-        y = Nets.predict_sensitivity(net, params, x)
+        y = predict_sensitivity(net, x)
         J = y[:, 2:end]
-        @test Nets.predict(net, params, x .+ dx) ≈ y[:,1] .+ J * dx
+        @test predict(net, x .+ dx) ≈ y[:,1] .+ J * dx
     end
 end
 
@@ -22,17 +22,17 @@ end
     srand(10)
     for i in 1:100
         widths = [rand(1:5) for i in 1:4]
-        net = Nets.Net(widths)
         x = randn(widths[1])
-        params = randn(net)
-        @test Nets.predict(net, params, x) == Nets.predict_sensitivity(net, params, x)[1:widths[end]]
+        params = randn(Params{Float64}, widths)
+        net = Net(params)
+        @test @inferred(predict(net, x)) == @inferred(predict_sensitivity(net, x)[1:widths[end]])
         for i in 1:length(x)
             dx = zeros(x)
             dx[i] = 1e-3
-            out = Nets.predict_sensitivity(net, params, x)
+            out = predict_sensitivity(net, x)
             y = out[:, 1]
             J = out[:, 2:end]
-            @test Nets.predict(net, params, x .+ dx) ≈ y .+ J * dx
+            @test predict(net, x .+ dx) ≈ y .+ J * dx
         end
     end
 end
@@ -41,35 +41,33 @@ end
     srand(20)
     for i in 1:10
         widths = [rand(1:5) for i in 1:4]
-        net = Nets.Net(widths)
-        g = (params, x) -> sum(Nets.predict(net, params, x))
-        params = randn(net)
+        g = (data, x) -> sum(predict(Net(Params(widths, data)), x))
+        data = randn(Params{Float64}, widths).data
         x = randn(widths[1])
-        g_tape = ReverseDiff.compile(ReverseDiff.GradientTape(g, (params, x)))
-        results = (similar(params), similar(x))
+        g_tape = ReverseDiff.compile(ReverseDiff.GradientTape(g, (data, x)))
+        results = (similar(data), similar(x))
 
         for i in 1:50
             x = randn(widths[1])
-            params = randn(net)
-            ReverseDiff.gradient!(results, g_tape, (params, x))
-            @test all(results .≈ ReverseDiff.gradient(g, (params, x)))
+            data = randn(Params{Float64}, widths).data
+            ReverseDiff.gradient!(results, g_tape, (data, x))
+            @test all(results .≈ ReverseDiff.gradient(g, (data, x)))
         end
     end
 
     for i in 1:10
         widths = [rand(1:5) for i in 1:4]
-        net = Nets.Net(widths)
-        g = (params, x) -> sum(Nets.predict_sensitivity(net, params, x))
-        params = randn(net)
+        g = (data, x) -> sum(predict_sensitivity(Net(Params(widths, data)), x))
+        data = randn(Params{Float64}, widths).data
         x = randn(widths[1])
-        g_tape = ReverseDiff.compile(ReverseDiff.GradientTape(g, (params, x)))
-        results = (similar(params), similar(x))
+        g_tape = ReverseDiff.compile(ReverseDiff.GradientTape(g, (data, x)))
+        results = (similar(data), similar(x))
 
         for i in 1:50
             x = randn(widths[1])
-            params = randn(net)
-            ReverseDiff.gradient!(results, g_tape, (params, x))
-            @test all(results .≈ ReverseDiff.gradient(g, (params, x)))
+            data = randn(Params{Float64}, widths).data
+            ReverseDiff.gradient!(results, g_tape, (data, x))
+            @test all(results .≈ ReverseDiff.gradient(g, (data, x)))
         end
     end
 end
