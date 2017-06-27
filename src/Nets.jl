@@ -111,5 +111,6 @@ end
 
 include("Explicit.jl")
 include("optimization.jl")
+include("scaling.jl")
 
 end
