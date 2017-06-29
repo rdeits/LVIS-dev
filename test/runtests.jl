@@ -130,8 +130,8 @@ end
     for (x, yJ) in train_data
         y = yJ[:, 1]
         J = yJ[:, 2:end]
-        @assert y ≈ f(x)
-        @assert J ≈ ForwardDiff.jacobian(f, x)
+        @test y ≈ f(x)
+        @test J ≈ ForwardDiff.jacobian(f, x)
     end
 
     u_to_x = inv(x_to_u)
@@ -140,9 +140,9 @@ end
     for (u, vJ) in train_data_scaled
         v = vJ[:, 1]
         J = vJ[:, 2:end]
-        @assert v |> v_to_y ≈ u |> u_to_x |> f
-        @assert J ≈ ForwardDiff.jacobian(u -> u |> u_to_x |> f |> y_to_v, u)
-        @assert maximum(abs, J) ≈ 1.0
+        @test v |> v_to_y ≈ u |> u_to_x |> f
+        @test J ≈ ForwardDiff.jacobian(u -> u |> u_to_x |> f |> y_to_v, u)
+        @test maximum(abs, J) ≈ 1.0
     end
 end
 
