@@ -55,7 +55,7 @@ Base.rand(::Type{Params{T}}, widths::AbstractVector{<:Integer}) where {T} =
 Base.randn(::Type{Params{T}}, widths::AbstractVector{<:Integer}) where {T} =
     Params(widths, randn(T, nparams(widths)))
 
-struct Net{P <: Params, T <: AffineMap}
+struct Net{P <: Params, T <: AffineMap} <: Function
     params::P
     input_tform::T
     output_tform::T

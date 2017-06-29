@@ -93,13 +93,15 @@ function rescale(data)
     J_scale = zeros(size(yJ, 2) - 1)
     for (x, yJ) in data
         y_scale .= max.(y_scale, abs.(yJ[:, 1]))
-        J_scale .= max.(J_scale, [maximum(abs, yJ[:, i + 1]) for i in 1:length(J_scale)])
+    end
+    for (x, yJ) in data
+        J_scale .= max.(J_scale, [maximum(abs, yJ[:, i + 1] ./ y_scale) for i in 1:length(J_scale)])
     end
 
     v_to_y = AffineMap(diagm(y_scale), zeros(y_scale))
     y_to_v = inv(v_to_y)
-    u_to_x = AffineMap(diagm(J_scale), zeros(J_scale))
-    x_to_u = inv(u_to_x)
+    x_to_u = AffineMap(diagm(J_scale), zeros(J_scale))
+    u_to_x = inv(x_to_u)
 
     _scale.(data, x_to_u, u_to_x, y_to_v), x_to_u, v_to_y
 end

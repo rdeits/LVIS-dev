@@ -74,8 +74,31 @@ end
     end
 end
 
+@testset "sensitivity gradients" begin
+    srand(50)
+    for i in 1:20
+        widths = [rand(1:5) for i in 1:4]
+        g = (data, x) -> sum(Nets.predict_sensitivity(Nets.Net(Nets.Params(widths, data)), x)[:, 2:end])
+        data = randn(Nets.Params{Float64}, widths).data
+        x = randn(widths[1])
+
+        results = (similar(data), similar(x))
+        ReverseDiff.gradient!(results, g, (data, x))
+        J = results[1]
+
+        y = g(data, x)
+
+        for j in 1:length(data)
+            Δ = zeros(data)
+            Δ[j] = 1e-3
+            y2 = g(data .+ Δ, x)
+            @test isapprox(y2, y + J' * Δ, atol=1e-9)
+        end
+    end
+end
+
 @testset "input output scaling" begin
-    srand(1)
+    srand(60)
     for i in 1:10
         widths = [rand(1:5) for i in 1:4]
         t_in = AffineMap(randn(widths[1], widths[1]), randn(widths[1]))
@@ -94,4 +117,32 @@ end
     end
 end
 
+@testset "scaling" begin
+    srand(1)
+    f(x) = [2 * x[1] + x[2] + 1, x[1] + 4 * x[2] - 3]
+
+    X = [randn(2) for i in 1:100]
+    Y = [hcat(f(x), ForwardDiff.jacobian(f, x)) for x in X];
+
+    train_data = collect(zip(X, Y))
+
+    train_data_scaled, x_to_u, v_to_y = Nets.rescale(train_data)
+    for (x, yJ) in train_data
+        y = yJ[:, 1]
+        J = yJ[:, 2:end]
+        @assert y ≈ f(x)
+        @assert J ≈ ForwardDiff.jacobian(f, x)
+    end
+
+    u_to_x = inv(x_to_u)
+    y_to_v = inv(v_to_y)
+
+    for (u, vJ) in train_data_scaled
+        v = vJ[:, 1]
+        J = vJ[:, 2:end]
+        @assert v |> v_to_y ≈ u |> u_to_x |> f
+        @assert J ≈ ForwardDiff.jacobian(u -> u |> u_to_x |> f |> y_to_v, u)
+        @assert maximum(abs, J) ≈ 1.0
+    end
+end
 
