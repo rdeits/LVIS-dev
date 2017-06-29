@@ -1,5 +1,6 @@
 module PyMPC
 
+using DrakeVisualizer
 using PyCall
 push!(PyVector(pyimport("sys")["path"]), joinpath(dirname(@__FILE__), "py-mpc"))
 
@@ -12,6 +13,8 @@ push!(PyVector(pyimport("sys")["path"]), joinpath(dirname(@__FILE__), "py-mpc"))
 
 using JuMP
 using Gurobi
+
+colmat(x::AbstractArray) = reshape(x, (length(x), 1))
 
 function solve_qp(qp::PyObject, x::AbstractVector)
     if !haskey(qp, :G)
@@ -55,6 +58,21 @@ function solve_qp(qp::PyObject, x::AbstractVector)
         status, fill(NaN, size(G, 2), 1), fill(NaN, size(G, 2), length(x))
     end
 end
+
+function run_mpc(controller::PyObject, x0::AbstractVector)
+    u_feedforward, x_trajectory, cost, switching_sequence = controller[:feedforward](colmat(x0))
+    if isnan(u_feedforward[1][1])
+        return u_feedforward[1], fill(NaN, length(u_feedforward[1]), length(x0)), x_trajectory
+    end
+    condensed = controller[:condense_program](switching_sequence)
+    u, cost = condensed[:solve](colmat(x0))
+    active_set = condensed[:get_active_set](colmat(x0), u)
+    u_offset, u_linear = condensed[:get_u_sensitivity](active_set)
+    vec(u_feedforward[1]), u_linear, vec.(x_trajectory)
+end
+
+include("pympc-models.jl")
+
 
 using Base.Test
 
