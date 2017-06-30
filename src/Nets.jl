@@ -100,8 +100,8 @@ function predict_sensitivity(net::Net, x::AbstractVector)
     y = params.weights[1] * net.input_tform(x) + params.biases[1]
     J = params.weights[1] * transform_deriv(net.input_tform, x)
     for i in 2:length(params.weights)
-        y = leaky_relu.(y)
         J = leaky_relu_sensitivity.(y, J)
+        y = leaky_relu.(y)
         y = params.weights[i] * y + params.biases[i]
         J = params.weights[i] * J
     end
