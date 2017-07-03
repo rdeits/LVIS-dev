@@ -82,14 +82,46 @@ Base.similar(net::Net, data::AbstractVector) =
         net.input_tform,
         net.output_tform)
 
+const relu_x = 1
+@ReverseDiff.forward hat_relu(y) = begin
+    if y >= relu_x
+        -(0.1/relu_x) * (y - relu_x)
+    elseif y >= 0
+        -(1/relu_x) * y + 1
+    elseif y >= -relu_x
+        (1/relu_x) * y + 1
+    else
+        (0.1/relu_x) * (y + relu_x)
+    end
+end
+
+@ReverseDiff.forward hat_relu_sensitivity(y, j) = begin
+    if y >= relu_x
+        -(0.1/relu_x) * j
+    elseif y >= 0
+        -(1/relu_x) * j
+    elseif y >= -relu_x
+        (1/relu_x) * j
+    else
+        (0.1/relu_x) * j
+    end
+end
+
+
 @ReverseDiff.forward leaky_relu(y) = y >= 0 ? y : 0.1 * y
 @ReverseDiff.forward leaky_relu_sensitivity(y, j) = y >= 0 ? j : 0.1 * j
+
+@ReverseDiff.forward elu(y) = y >= 0 ? y : exp(y) - 1
+@ReverseDiff.forward elu_sensitivity(y, j) = y >= 0 ? j : exp(y) * j
+
+@ReverseDiff.forward gaussian(y) = exp(-y^2)
+@ReverseDiff.forward gaussian_sensitivity(y, j) = -2 * y * exp(-y^2) * j
 
 function predict(net::Net, x::AbstractVector)
     params = net.params
     y = params.weights[1] * net.input_tform(x) + params.biases[1]
     for i in 2:length(params.weights)
-        y = leaky_relu.(y)
+        y = gaussian.(y)
         y = params.weights[i] * y + params.biases[i]
     end
     net.output_tform(y)
@@ -100,8 +132,8 @@ function predict_sensitivity(net::Net, x::AbstractVector)
     y = params.weights[1] * net.input_tform(x) + params.biases[1]
     J = params.weights[1] * transform_deriv(net.input_tform, x)
     for i in 2:length(params.weights)
-        J = leaky_relu_sensitivity.(y, J)
-        y = leaky_relu.(y)
+        J = gaussian_sensitivity.(y, J)
+        y = gaussian.(y)
         y = params.weights[i] * y + params.biases[i]
         J = params.weights[i] * J
     end

@@ -1,12 +1,3 @@
-module Models
-
-import PyMPC
-using PyMPC: colmat
-using PyCall: PyObject
-using DrakeVisualizer, GeometryTypes, CoordinateTransformations
-import DrakeVisualizer: setgeometry!, settransform!
-using Parameters
-
 struct HybridCartPole{T}
     sys::PyObject
     l::T
@@ -197,6 +188,4 @@ end
 function settransform!(vis::Visualizer, sys::HybridCartPole, x::AbstractVector)
     settransform!(vis[:cart], Translation(x[1], 0, 0))
     settransform!(vis[:cart][:pole], LinearMap(RotY(-x[2] - pi/2)))
-end
-
-end
+end    

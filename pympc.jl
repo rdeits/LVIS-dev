@@ -71,7 +71,7 @@ function run_mpc(controller::PyObject, x0::AbstractVector)
     vec(u_feedforward[1]), u_linear, vec.(x_trajectory)
 end
 
-include("pympc-models.jl")
+include("pympc-models/models.jl")
 
 
 using Base.Test
