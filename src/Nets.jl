@@ -121,7 +121,7 @@ function predict(net::Net, x::AbstractVector)
     params = net.params
     y = params.weights[1] * net.input_tform(x) + params.biases[1]
     for i in 2:length(params.weights)
-        y = gaussian.(y)
+        y = hat_relu.(y)
         y = params.weights[i] * y + params.biases[i]
     end
     net.output_tform(y)
@@ -132,8 +132,8 @@ function predict_sensitivity(net::Net, x::AbstractVector)
     y = params.weights[1] * net.input_tform(x) + params.biases[1]
     J = params.weights[1] * transform_deriv(net.input_tform, x)
     for i in 2:length(params.weights)
-        J = gaussian_sensitivity.(y, J)
-        y = gaussian.(y)
+        J = hat_relu_sensitivity.(y, J)
+        y = hat_relu.(y)
         y = params.weights[i] * y + params.biases[i]
         J = params.weights[i] * J
     end
