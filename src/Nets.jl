@@ -5,7 +5,8 @@ module Nets
 export Net, Params, predict, predict_sensitivity
 
 using Parameters: @with_kw
-import ReverseDiff
+using ReverseDiff
+using ReverseDiff: @forward
 import StochasticOptimization
 using CoordinateTransformations: AffineMap, UniformScaling, transform_deriv
 using MLDataPattern: batchview, shuffleobs
@@ -55,14 +56,16 @@ Base.rand(::Type{Params{T}}, widths::AbstractVector{<:Integer}) where {T} =
 Base.randn(::Type{Params{T}}, widths::AbstractVector{<:Integer}) where {T} =
     Params(widths, randn(T, nparams(widths)))
 
-struct Net{P <: Params, T <: AffineMap} <: Function
+struct Net{P <: Params, F, T <: AffineMap} <: Function
     params::P
+    activation::F
     input_tform::T
     output_tform::T
 end
 
-Net(params::Params) = 
+Net(params::Params, activation=leaky_relu) = 
     Net(params,
+        activation,
         AffineMap(UniformScaling(1.0), zeros(ninputs(params))),
         AffineMap(UniformScaling(1.0), zeros(noutputs(params))))
 
@@ -83,7 +86,7 @@ Base.similar(net::Net, data::AbstractVector) =
         net.output_tform)
 
 const relu_x = 1
-@ReverseDiff.forward hat_relu(y) = begin
+function hat_relu(y)
     if y >= relu_x
         -(0.1/relu_x) * (y - relu_x)
     elseif y >= 0
@@ -95,33 +98,32 @@ const relu_x = 1
     end
 end
 
-@ReverseDiff.forward hat_relu_sensitivity(y, j) = begin
+derivative(::typeof(hat_relu)) = y -> begin
     if y >= relu_x
-        -(0.1/relu_x) * j
+        -(0.1/relu_x)
     elseif y >= 0
-        -(1/relu_x) * j
+        -(1/relu_x)
     elseif y >= -relu_x
-        (1/relu_x) * j
+        (1/relu_x)
     else
-        (0.1/relu_x) * j
+        (0.1/relu_x)
     end
 end
 
+leaky_relu(y) = y >= 0 ? y : 0.1 * y
+derivative(::typeof(leaky_relu)) = y -> y >= 0 ? 1.0 : 0.1
 
-@ReverseDiff.forward leaky_relu(y) = y >= 0 ? y : 0.1 * y
-@ReverseDiff.forward leaky_relu_sensitivity(y, j) = y >= 0 ? j : 0.1 * j
+elu(y) = y >= 0 ? y : exp(y) - 1
+derivative(::typeof(elu)) = y -> y >= 0 ? 1.0 : exp(y)
 
-@ReverseDiff.forward elu(y) = y >= 0 ? y : exp(y) - 1
-@ReverseDiff.forward elu_sensitivity(y, j) = y >= 0 ? j : exp(y) * j
-
-@ReverseDiff.forward gaussian(y) = exp(-y^2)
-@ReverseDiff.forward gaussian_sensitivity(y, j) = -2 * y * exp(-y^2) * j
+gaussian(y) = exp(-y^2)
+derivative(::typeof(gaussian)) = y -> -2 * y * exp(-y^2)
 
 function predict(net::Net, x::AbstractVector)
     params = net.params
     y = params.weights[1] * net.input_tform(x) + params.biases[1]
     for i in 2:length(params.weights)
-        y = hat_relu.(y)
+        y = (@forward(net.activation)).(y)
         y = params.weights[i] * y + params.biases[i]
     end
     net.output_tform(y)
@@ -132,8 +134,9 @@ function predict_sensitivity(net::Net, x::AbstractVector)
     y = params.weights[1] * net.input_tform(x) + params.biases[1]
     J = params.weights[1] * transform_deriv(net.input_tform, x)
     for i in 2:length(params.weights)
-        J = hat_relu_sensitivity.(y, J)
-        y = hat_relu.(y)
+        dJ = (@forward(derivative(net.activation))).(y)
+        J = dJ .* J
+        y = (@forward(net.activation)).(y)
         y = params.weights[i] * y + params.biases[i]
         J = params.weights[i] * J
     end
