@@ -1,4 +1,4 @@
-struct HybridCartPole{T}
+struct HybridCartPole{T} <: AbstractMPCModel
     sys::PyObject
     l::T
     d::T
@@ -6,6 +6,8 @@ struct HybridCartPole{T}
     X::Vector{PyObject}
     U::Vector{PyObject}
 end
+
+Δt(sys::HybridCartPole) = sys.Δt
 
 function HybridCartPole(;
     mc = 1.,
@@ -139,13 +141,6 @@ function controller(sys::HybridCartPole;
 
     # hybrid controller
     controller = PyMPC.control.MPCHybridController(sys.sys, N, objective_norm, Q, R, P, X_N)
-end
-
-function playback(vis::Visualizer, sys::HybridCartPole, xs::AbstractVector)
-    for x in xs
-        settransform!(vis, sys, x)
-        sleep(sys.Δt)
-    end
 end
 
 function update(sys::HybridCartPole, x, u)

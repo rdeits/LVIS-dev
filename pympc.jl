@@ -4,7 +4,7 @@ using DrakeVisualizer
 using PyCall
 push!(PyVector(pyimport("sys")["path"]), joinpath(dirname(@__FILE__), "py-mpc"))
 
-@pyimport pympc.geometry as geometry
+@pyimport pympc.geometry.polytope as polytope
 @pyimport pympc.control as control
 @pyimport pympc.dynamical_systems as dynamical_systems
 @pyimport pympc.plot as mpcplot
@@ -60,9 +60,9 @@ function solve_qp(qp::PyObject, x::AbstractVector)
 end
 
 function run_mpc(controller::PyObject, x0::AbstractVector)
-    u_feedforward, x_trajectory, cost, switching_sequence = controller[:feedforward](colmat(x0))
+    u_feedforward, x_trajectory, switching_sequence, cost = controller[:feedforward](colmat(x0))
     if isnan(u_feedforward[1][1])
-        return u_feedforward[1], fill(NaN, length(u_feedforward[1]), length(x0)), x_trajectory
+        return vec(u_feedforward[1]), fill(NaN, length(u_feedforward[1]), length(x0)), vec.(x_trajectory)
     end
     condensed = controller[:condense_program](switching_sequence)
     u, cost = condensed[:solve](colmat(x0))
@@ -96,8 +96,8 @@ using Base.Test
     Q = 10 * eye(2)
     R = eye(1)
 
-    X_bounds = PyMPC.geometry.Polytope[:from_bounds](reshape(x_min, 2, 1), reshape(x_max, 2, 1))[:assemble]()
-    U_bounds = PyMPC.geometry.Polytope[:from_bounds](reshape(u_min, 1, 1), reshape(u_max, 1, 1))[:assemble]()
+    X_bounds = polytope.Polytope[:from_bounds](reshape(x_min, 2, 1), reshape(x_max, 2, 1))[:assemble]()
+    U_bounds = polytope.Polytope[:from_bounds](reshape(u_min, 1, 1), reshape(u_max, 1, 1))[:assemble]()
     controller = PyMPC.control.MPCController(pysys, N, "two", Q, R, X=X_bounds, U=U_bounds)
 
     qp = controller[:condensed_program]

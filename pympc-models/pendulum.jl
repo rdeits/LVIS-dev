@@ -10,12 +10,14 @@
     u_max::Vector{T} = .-u_min
 end
 
-struct Pendulum{T}
+struct Pendulum{T} <: AbstractMPCModel
     sys::PyObject
     params::PendulumParams{T}
     X::Vector{PyObject}
     U::Vector{PyObject}
 end
+
+Δt(sys::Pendulum) = sys.params.t_s
 
 function dynamics(p::PendulumParams, x, u)
     @unpack m, g, l = p
@@ -92,13 +94,6 @@ function controller(sys::Pendulum;
 
     # hybrid controller
     controller = PyMPC.control.MPCHybridController(sys.sys, N, objective_norm, Q, R, P, Xf)
-end
-
-function playback(vis::Visualizer, sys::Pendulum, xs::AbstractVector)
-    for x in xs
-        settransform!(vis, sys, x)
-        sleep(sys.params.t_s)
-    end
 end
 
 function update(sys::Pendulum, x, u)
