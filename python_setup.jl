@@ -1,5 +1,6 @@
 using PyCall
 @pyimport pip
+pip.main(["install", "cython"])
 pip.main(["install", "-r", "py-mpc/requirements.txt"])
 if is_linux()
     cd("$(ENV["HOME"])/apps/gurobi701/linux64") do
