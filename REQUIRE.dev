@@ -1,11 +1,4 @@
-git@github.com:JuliaDiff/ReverseDiff.jl.git 820690c8efde8e71e1a7868949f7e703de144e03
-git@github.com:rdeits/Polyhedra.jl.git 5fea38f147666bc6b12c811050131000176a35d9
-git@github.com:rdeits/CDDLib.jl.git 69895ca81721bd3632a4e33f4dc8f35977e00dba
 git@github.com:JuliaPolyhedra/QHull.jl.git 87702e5e9ddcb5a8d19d65112dc48bd310215477
-git@github.com:JuliaGeometry/GeometryTypes.jl.git 60a9a5ebfb8ce530d520c7565ce6117ef5ddf050
-git@github.com:JuliaPlots/Plots.jl.git 76186cab970bba8e97c1a0c84086484b3fd52709
 git@github.com:JuliaML/StochasticOptimization.jl.git a1b3e42782b0e5179dd1a96371cf4acb2858170f
-git@github.com:rdeits/DrakeVisualizer.jl.git e8f066c4cfad07c2214823b7daa63be75dbeb984
-git@github.com:rdeits/Meshing.jl.git 37fcf18a444112094fe475adb5f18646e991da0c
 git@github.com:JuliaArrays/StaticArrays.jl.git 0dfe8071abe09ef9145a1d94c746bd29a100fb30
 git@github.com:rdeits/AxisArrayVariables.jl.git 79bcb96d9bbc062dacf21c1a4f74f253ce6bb33c

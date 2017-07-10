@@ -76,43 +76,50 @@ end
 
 @testset "sensitivity gradients" begin
     srand(50)
-    for i in 1:20
-        widths = [rand(1:5) for i in 1:4]
-        g = (data, x) -> sum(Nets.predict_sensitivity(Nets.Net(Nets.Params(widths, data)), x)[:, 2:end])
-        data = randn(Nets.Params{Float64}, widths).data
-        x = randn(widths[1])
+    for (activation, atol) in [(Nets.leaky_relu, 1e-9), (Nets.hat_relu, 1e-9), (Nets.gaussian, 1e-9)]
+        for i in 1:20
+            widths = [rand(1:5) for i in 1:4]
+            g = (data, x) -> sum(Nets.predict_sensitivity(Nets.Net(Nets.Params(widths, data), activation), x)[:, 2:end])
+            data = randn(Nets.Params{Float64}, widths).data
+            x = randn(widths[1])
 
-        results = (similar(data), similar(x))
-        ReverseDiff.gradient!(results, g, (data, x))
-        J = results[1]
+            results = (similar(data), similar(x))
+            ReverseDiff.gradient!(results, g, (data, x))
+            J = results[1]
 
-        y = g(data, x)
+            y = g(data, x)
 
-        for j in 1:length(data)
-            Δ = zeros(data)
-            Δ[j] = 1e-3
-            y2 = g(data .+ Δ, x)
-            @test isapprox(y2, y + J' * Δ, atol=1e-9)
+            for j in 1:length(data)
+                Δ = zeros(data)
+                Δ[j] = 1e-5
+                y2 = g(data .+ Δ, x)
+                if !isapprox(y2, y + J' * Δ, atol=atol)
+                    @show y2 y2 - (y + J' * Δ)
+                end
+                @test isapprox(y2, y + J' * Δ, atol=atol)
+            end
         end
     end
 end
 
 @testset "input output scaling" begin
     srand(60)
-    for i in 1:10
-        widths = [rand(1:5) for i in 1:4]
-        t_in = AffineMap(randn(widths[1], widths[1]), randn(widths[1]))
-        t_out = AffineMap(randn(widths[end], widths[end]), randn(widths[end]))
-        params = randn(Params{Float64}, widths)
-        net = Net(params, t_in, t_out)
-        for j in 1:10
-            x0 = randn(widths[1])
-            yJ = predict_sensitivity(net, x0)
-            y = yJ[:, 1]
-            J = yJ[:, 2:end]
-            @test predict(net, x0) == y
+    for activation in [Nets.leaky_relu, Nets.hat_relu, Nets.gaussian, Nets.elu]
+        for i in 1:10
+            widths = [rand(1:5) for i in 1:4]
+            t_in = AffineMap(randn(widths[1], widths[1]), randn(widths[1]))
+            t_out = AffineMap(randn(widths[end], widths[end]), randn(widths[end]))
+            params = randn(Params{Float64}, widths)
+            net = Net(params, activation, t_in, t_out)
+            for j in 1:10
+                x0 = randn(widths[1])
+                yJ = predict_sensitivity(net, x0)
+                y = yJ[:, 1]
+                J = yJ[:, 2:end]
+                @test predict(net, x0) == y
 
-            @test ForwardDiff.jacobian(net, x0) ≈ J
+                @test ForwardDiff.jacobian(net, x0) ≈ J
+            end
         end
     end
 end
