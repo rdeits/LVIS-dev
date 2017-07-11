@@ -62,13 +62,25 @@ end
 function run_mpc(controller::PyObject, x0::AbstractVector)
     u_feedforward, x_trajectory, switching_sequence, cost = controller[:feedforward](colmat(x0))
     if isnan(u_feedforward[1][1])
-        return vec(u_feedforward[1]), fill(NaN, length(u_feedforward[1]), length(x0)), vec.(x_trajectory)
+        return vec.(u_feedforward), vec.(x_trajectory), switching_sequence, fill(NaN, length(u_feedforward[1]), length(x0))
     end
     condensed = controller[:condense_program](switching_sequence)
     u, cost = condensed[:solve](colmat(x0))
     active_set = condensed[:get_active_set](colmat(x0), u)
     u_offset, u_linear = condensed[:get_u_sensitivity](active_set)
-    vec(u_feedforward[1]), u_linear, vec.(x_trajectory)
+    vec.(u_feedforward), vec.(x_trajectory), switching_sequence, u_linear
+end
+
+function run_mpc(controller::PyObject, x0::AbstractVector, u_warmstart, x_warmstart, switching_sequence)
+    u_feedforward, x_trajectory, switching_sequence, cost = controller[:feedforward](colmat(x0), colmat.(u_warmstart), colmat.(x_warmstart), switching_sequence)
+    if isnan(u_feedforward[1][1])
+        return vec.(u_feedforward), vec.(x_trajectory), switching_sequence, fill(NaN, length(u_feedforward[1]), length(x0))
+    end
+    condensed = controller[:condense_program](switching_sequence)
+    u, cost = condensed[:solve](colmat(x0))
+    active_set = condensed[:get_active_set](colmat(x0), u)
+    u_offset, u_linear = condensed[:get_u_sensitivity](active_set)
+    vec.(u_feedforward), vec.(x_trajectory), switching_sequence, u_linear
 end
 
 include("pympc-models/models.jl")

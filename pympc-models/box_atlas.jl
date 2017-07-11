@@ -1,22 +1,19 @@
-@pyimport pympc.box_atlas_pwa_dynamics as boxatlas
+@pyimport pympc.models.boxatlas as boxatlas
 
 immutable BoxAtlas <: AbstractMPCModel
     sys::PyObject
-    Δt::Float64
 
-    BoxAtlas() = new(boxatlas.pwa_system, boxatlas.t_s)
+    BoxAtlas(;kwargs...) = new(boxatlas.BoxAtlasPWAModel(;kwargs...))
 end
 
-Δt(sys::BoxAtlas) = sys.Δt
+Δt(sys::BoxAtlas) = sys.sys[:t_s]
 
 function controller(sys::BoxAtlas;
                     N = 10,
                     Q = eye(10),
                     R = eye(9),
                     objective_norm = "two")
-    P = Q
-    X_N = PyMPC.polytope.Polytope[:from_bounds](-5 .* ones(10, 1), 5 .* ones(10, 1))[:assemble]()
-    PyMPC.control.MPCHybridController(sys.sys, N, objective_norm, Q, R, P, X_N)
+    sys.sys[:controller](N=N, Q=Q, R=R, objective_norm=objective_norm)
 end
 
 function setgeometry!(vis::Visualizer, sys::BoxAtlas)
@@ -36,7 +33,8 @@ end
 function settransform!(vis::Visualizer, sys::BoxAtlas, y::AbstractArray, 
                         # u::AbstractArray
                         )
-    x = vec(y) + vec(boxatlas.x_eq)
+    x_eq, u_eq = sys.sys[:equilibrium_point]()
+    x = vec(y) + vec(x_eq)
     settransform!(vis[:body], Translation(x[1], 0, x[2]))
     settransform!(vis[:lf], Translation(x[3], 0, x[4]))
     settransform!(vis[:rf], Translation(x[5], 0, x[6]))
@@ -62,28 +60,11 @@ function settransform!(vis::Visualizer, sys::BoxAtlas, y::AbstractArray,
     # end
 end 
 
+function generate_x0(sys::BoxAtlas, controller::PyObject)
+    vec(sys.sys[:random_state](controller=controller))
+end
+
 function generate_x0(sys::BoxAtlas)
-    i = 0
-    while true
-        i += 1
-        x0 = zeros(10)
-        x0[1:2] .= 2 .* (rand(2) .- 0.5)
-        x0[3:4] .= x0[1:2] .- rand(2)
-        x0[5:6] .= x0[1:2] .+ rand(2)
-        x0[7] = x0[1] - rand()
-        x0[8] = x0[2] + (rand() - 0.5)
-        x0[9:10] = 2 .* (rand(2) .- 0.5)
-        # x_max = ones(10)
-        # x_min = .-x_max
-        # x0 = rand(10) .* (x_max .- x_min) .+ x_min
-        try
-            xtraj, ss = sys.sys[:simulate](colmat(x0), [zeros(9, 1)])
-            return x0, i
-        catch e
-            if !isa(e, PyCall.PyError)
-                rethrow(e)
-            end
-        end
-    end
+    vec(sys.sys[:random_state]())
 end
 
