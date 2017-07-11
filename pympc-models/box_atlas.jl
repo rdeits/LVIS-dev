@@ -16,6 +16,26 @@ function controller(sys::BoxAtlas;
     sys.sys[:controller](N=N, Q=Q, R=R, objective_norm=objective_norm)
 end
 
+function update(sys::BoxAtlas, x, u)
+    x_next = vec(sys.sys[:pwa_system][:simulate](colmat(x), [colmat(u)])[1][2])
+end
+
+function simulate(sys::BoxAtlas, x0, controller::PyObject; kwargs...)
+    simulate(sys, x0, x -> vec(controller[:feedback](colmat(x))); kwargs...)
+end
+
+function simulate(sys::BoxAtlas, x0, controller::Function; N_sim::Int=100)
+    u = typeof(x0)[]
+    x = typeof(x0)[]
+    push!(x, x0)
+    for k in 1:N_sim
+        push!(u, controller(x[end]))
+        x_next = update(sys, x[end], u[end])
+        push!(x, x_next)
+    end
+    x
+end
+
 function setgeometry!(vis::Visualizer, sys::BoxAtlas)
     delete!(vis)
     setgeometry!(vis[:body], HyperRectangle(Vec(-0.1, -0.05, -0.2), Vec(0.2, 0.1, 0.4)))
