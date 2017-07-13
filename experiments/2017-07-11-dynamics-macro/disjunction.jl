@@ -3,6 +3,7 @@ module Ifs
 using JuMP
 using JuMP: AbstractJuMPScalar
 using MacroTools: @capture
+using IntervalArithmetic: Interval, mid, radius
 
 getmodel(x::JuMP.Variable) = x.m
 getmodel(x::JuMP.GenericAffExpr) = x.vars[1].m
@@ -62,7 +63,18 @@ macro condition(ex)
     _condition(ex)
 end
 
-upper_bound(m::Model, g::AbstractJuMPScalar) = 10
+lowerbound(x::Number) = x
+upperbound(x::Number) = x
+
+lowerbound(x::AbstractJuMPScalar) = -upperbound(-x)
+
+upperbound(x::Variable) = JuMP.getupperbound(x)
+
+function upperbound(e::JuMP.GenericAffExpr{T, Variable}) where {T}
+    intervals = [Interval(getlowerbound(v), getupperbound(v)) for v in e.vars]
+    ex_bounds = e.coeffs' * intervals + e.constant
+    mid(ex_bounds) + radius(ex_bounds)
+end
 
 require!(m::Model, c::Condition{typeof(<=)}) = @constraint(m, c.lhs <= c.rhs)
 function require!(m::Model, c::Condition{typeof(==)})
@@ -73,15 +85,15 @@ end
 
 function implies!(m::Model, z::AbstractJuMPScalar, c::Condition{typeof(<=)})
     g = c.lhs - c.rhs
-    M = upper_bound(m, g)
+    M = upperbound(g)
     @constraint m c.lhs <= c.rhs + M * (1 - z)
 end 
 
 function implies!(m::Model, z::AbstractJuMPScalar, c::Condition{typeof(==)})
     g = c.lhs - c.rhs
-    M_u = upper_bound(m, g)
+    M_u = upperbound(g)
     @constraint(m, c.lhs - c.rhs <= M_u * (1 - z))
-    M_l = -upper_bound(m, -g)
+    M_l = -upperbound(-g)
     @constraint(m, c.lhs - c.rhs >= M_l * (1 - z))
 end 
 
@@ -134,6 +146,8 @@ macro switch(ex)
             comp = complement(cond)
             m = getmodel(cond.lhs)
             y = $(Expr(:macrocall, Symbol("@variable"), :m, Expr(:(=), esc(:basename), "y")))
+            setlowerbound(y, min(lowerbound($(esc(v1))), lowerbound($(esc(v2)))))
+            setupperbound(y, max(upperbound($(esc(v1))), upperbound($(esc(v2)))))
             disjunction!(m, 
                 Implication(cond, Condition(==, y, $(esc(v1)))),
                 Implication(comp, Condition(==, y, $(esc(v2)))))
