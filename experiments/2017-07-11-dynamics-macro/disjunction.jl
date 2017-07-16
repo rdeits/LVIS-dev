@@ -138,7 +138,7 @@ function disjunction!(m::Model, i1::Implication, i2::Implication)
     push!(get!(m.ext, :disjunctions, Disjunction[]), Disjunction([i1, i2]))
 end
 
-macro switch(ex)
+macro disjunction(ex)
     body, cond_expr = if @capture(ex, if c1_; v1_; else v2_; end)
         cond_expr = _condition(c1)
         quote
