@@ -4,6 +4,7 @@ DrakeVisualizer 0.2.0
 ForwardDiff 0.4.2
 FunctionWrappers 0.1.0
 GeometryTypes 0.4.0
+GR
 Gurobi 0.3.2
 IJulia 1.5.0
 Interact 0.4.5
@@ -21,4 +22,3 @@ PyCall 1.12.0
 PyPlot 2.3.2
 ReverseDiff 0.1.4
 StaticArrays 0.6.0
-GR
