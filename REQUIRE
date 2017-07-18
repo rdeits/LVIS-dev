@@ -1,5 +1,6 @@
 AxisArrays
-CDDLib 0.2.0
+Cbc
+CDDLib
 DrakeVisualizer 0.2.0
 ForwardDiff 0.4.2
 FunctionWrappers 0.1.0
@@ -11,11 +12,11 @@ Interact 0.4.5
 IntervalArithmetic
 JLD
 JuMP 0.16.2
-Meshing 0.2.0
+Meshing
 MLDataPattern 0.1.0
 Parameters 0.7.2
 Plots 0.12.0
-Polyhedra 0.2.0
+Polyhedra
 ProfileView
 ProgressMeter 0.3.4
 PyCall 1.12.0

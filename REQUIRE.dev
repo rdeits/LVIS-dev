@@ -1,4 +1,4 @@
 git@github.com:JuliaPolyhedra/QHull.jl.git 87702e5e9ddcb5a8d19d65112dc48bd310215477
 git@github.com:JuliaML/StochasticOptimization.jl.git a1b3e42782b0e5179dd1a96371cf4acb2858170f
 git@github.com:rdeits/AxisArrayVariables.jl.git 79bcb96d9bbc062dacf21c1a4f74f253ce6bb33c
-git@github.com:rdeits/JuMPIndicators.jl.git 64abdb000fae66cfc7901fac6588a09b3d81b943
+git@github.com:rdeits/ConditionalJuMP.jl.git 2c4d6e3696129ec6027310b06800028bdd6732bd
