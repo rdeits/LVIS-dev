@@ -13,7 +13,7 @@ using MLDataPattern: batchview, shuffleobs
 
 head(t::Tuple) = tuple(t[1])
 
-function viewblocks{T <: NTuple}(data::AbstractArray, shapes::AbstractVector{T})
+function viewblocks(data::AbstractArray, shapes::AbstractVector{T}) where {T <: NTuple}
     starts = cumsum(vcat([1], prod.(shapes)))
     [reshape(view(data, starts[i]:(starts[i+1] - 1)), shapes[i]) for i in 1:length(shapes)]
 end
@@ -28,8 +28,8 @@ struct Params{T, D <: AbstractVector{T}, M<:AbstractMatrix{T}, V<:AbstractVector
         new{T, D, M, V}(data, weights, biases, size.(weights))
 end
 
-Params{T, D<:AbstractVector{T}, M<:AbstractMatrix{T}, V<:AbstractVector{T}}(
-    data::D, weights::Vector{M}, biases::Vector{V}) =
+Params(
+    data::D, weights::Vector{M}, biases::Vector{V}) where {T,D <: AbstractVector{T},M <: AbstractMatrix{T},V <: AbstractVector{T}} =
     Params{T, D, M, V}(data, weights, biases)
 
 function Params(shapes::Vector{<:NTuple}, data::AbstractVector)
