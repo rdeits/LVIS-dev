@@ -1,11 +1,15 @@
 module Box
 
-using Parameters
+using JuMP
 using Polyhedra
-using StaticArrays
-using JuMPIndicators
-using DrakeVisualizer, CoordinateTransformations
-import Base: convert
+using DrakeVisualizer
+using CoordinateTransformations: Translation
+using Parameters: @with_kw
+using CDDLib: CDDLibrary
+using StaticArrays: SVector
+using Gurobi: GurobiSolver
+using ConditionalJuMP: @disjunction, setup_indicators!
+import Base: convert, vec
 
 function from_bounds(lb::AbstractVector, ub::AbstractVector)
     len = length(lb)
@@ -17,7 +21,7 @@ end
 
 @with_kw mutable struct BoxAtlas{T}
     position_limits::Dict{Body, SimpleHRepresentation{2, T}} = Dict(
-        Trunk=>from_bounds([0.3, 0.3], [0.7, 0.7]),
+        Trunk=>from_bounds([-1.0, 0], [1.0, 2.0]),
         LeftFoot=>from_bounds([0.0, -0.7], [0.4, -0.3]),
         RightFoot=>from_bounds([-0.4, -0.7], [0.0, -0.3]),
         LeftHand=>from_bounds([0.2, -0.1], [0.6, 0.3]),
@@ -76,17 +80,33 @@ function convert(::Type{State{T}}, x::AbstractVector) where {T}
         )
 end
 
-function Base.similar(x::State)
-    position = similar(x.position)
+function Base.similar(x::State{T}, ::Type{T2}=T) where {T, T2}
+    position = Dict{Body, SVector{2, T2}}()
     for (k, v) in x.position
-        position[k] = similar(v)
+        position[k] = zeros(SVector{2, T2})
     end
-    velocity = similar(x.velocity)
+    velocity = Dict{Body, SVector{2, T2}}()
     for (k, v) in x.velocity
-        velocity[k] = similar(v)
+        velocity[k] = zeros(SVector{2, T2})
     end
     State(position, velocity)
 end
+
+JuMP.getvalue(s::State) = State(
+    Dict([(body, getvalue.(p)) for (body, p) in s.position]),
+    Dict([(body, getvalue.(p)) for (body, p) in s.velocity]))
+
+vec(s::State) = convert(Array, vcat(
+    s.position[Trunk],
+    s.position[LeftFoot],
+    s.position[RightFoot],
+    s.position[LeftHand],
+    s.position[RightHand],
+    s.velocity[Trunk],
+    s.velocity[LeftFoot],
+    s.velocity[RightFoot],
+    s.velocity[LeftHand],
+    s.velocity[RightHand]))
 
 struct Input{T}
     force::Dict{Body, SVector{2, T}}
@@ -105,6 +125,15 @@ function convert(::Type{Input{T}}, x::AbstractVector) where {T}
     )
 end
 
+JuMP.getvalue(s::Input) = Input(
+    Dict([(body, getvalue.(p)) for (body, p) in s.force]))
+
+vec(u::Input) = convert(Array, vcat(
+    u.force[LeftFoot],
+    u.force[RightFoot],
+    u.force[LeftHand],
+    u.force[RightHand]))
+
 struct HRepIter{P <: HRepresentation}
     p::P
 end
@@ -114,9 +143,9 @@ Base.done(h::HRepIter, i) = donehrep(h.p, i)
 Base.next(h::HRepIter, i) = nexthrep(h.p, i)
 Base.length(h::HRepIter) = length(h.p)
 
-function update(model::BoxAtlas, x::State{T}, u::Input{T}) where {T}
-    xnext = similar(x)
-    Tnext = Base.promote_op(+, T, T)
+function update(model::BoxAtlas, x::State{T1}, u::Input{T2}) where {T1, T2}
+    Tnext = Base.promote_op(+, T1, T2)
+    xnext = similar(x, Tnext)
     acceleration = Dict{Body, SVector{2, Tnext}}()
 
     # Apply joint forces
@@ -125,6 +154,9 @@ function update(model::BoxAtlas, x::State{T}, u::Input{T}) where {T}
         acceleration[body] = u.force[body] ./ model.masses[body]
         acceleration[Trunk] -= u.force[body] ./ model.masses[Trunk]
     end
+
+    # TODO: separate components of acceleration so we can see which one is
+    # misbehaving
 
     # Apply soft joint limits
     for body in keys(u.force)
@@ -152,7 +184,7 @@ function update(model::BoxAtlas, x::State{T}, u::Input{T}) where {T}
         acceleration[body] += @disjunction if separation <= 0
             (-separation .* model.stiffness .* SVector(0., 1) - model.viscous_friction .* (x.velocity[Trunk] .+ x.velocity[body]) .* SVector(1., 1)) ./ model.masses[body]
         else
-            zeros(SVector{2, T})
+            zeros(SVector{2, Tnext})
         end
     end
 
@@ -162,6 +194,21 @@ function update(model::BoxAtlas, x::State{T}, u::Input{T}) where {T}
         acceleration[body] += damping_force ./ model.masses[body]
         acceleration[Trunk] -= damping_force ./ model.masses[Trunk]
     end
+
+    # # Apply soft velocity limits
+    # for body in keys(u.force)
+    #     force = zero(SVector{2, Tnext})
+    #     for face in HRepIter(model.velocity_limits[body])
+    #         separation = -(face.a' * x.velocity[body] - face.β)
+    #         force += @disjunction if separation <= 0
+    #             separation .* model.stiffness .* face.a
+    #         else
+    #             zeros(face.a)
+    #         end
+    #     end
+    #     acceleration[body] += force ./ model.masses[body]
+    #     acceleration[Trunk] += -force ./ model.masses[Trunk]
+    # end
 
     # Non-inertial reference frame
     for body in keys(u.force)
@@ -189,6 +236,66 @@ function DrakeVisualizer.settransform!(vis::Visualizer, model::BoxAtlas, x::Stat
         settransform!(vis[:trunk][Symbol(body)], Translation(x.position[body][1], 0, x.position[body][2]))
     end
 end
+
+function setlimits!(u::Input{Variable}, robot::BoxAtlas)
+    for (body, force) in u.force
+        setlowerbound.(force, -robot.effort_limits[body])
+        setupperbound.(force, robot.effort_limits[body])
+    end
+end
+
+function setlimits!(x::State{Variable}, robot::BoxAtlas)
+    for (body, position) in x.position
+        verts = SimpleVRepresentation(polyhedron(robot.position_limits[body], CDDLibrary())).V
+        lb = vec(minimum(verts, 1))
+        ub = vec(maximum(verts, 1))
+        widths = ub .- lb
+        lb .-= widths
+        ub .+= widths
+        setlowerbound.(position, lb)
+        setupperbound.(position, ub)
+        @assert all(getlowerbound.(position) .== lb)
+        @assert all(getupperbound.(position) .== ub)
+    end
+
+    for (body, velocity) in x.velocity
+        verts = SimpleVRepresentation(polyhedron(robot.velocity_limits[body], CDDLibrary())).V
+        lb = vec(minimum(verts, 1))
+        ub = vec(maximum(verts, 1))
+        widths = ub .- lb
+        lb .-= widths
+        ub .+= widths
+        setlowerbound.(velocity, lb)
+        setupperbound.(velocity, ub)
+        @assert all(getlowerbound.(velocity) .== lb)
+        @assert all(getupperbound.(velocity) .== ub)
+    end
+end
+
+function run_mpc(robot::BoxAtlas, x0::State, N=10)
+    model = Model(solver=GurobiSolver())
+    u = Input(@variable(model, [1:10], basename="u"))
+    setlimits!(u, robot)
+    x = State(@variable(model, [1:20], basename="x"))
+    setlimits!(x, robot)
+    @constraint(model, vec(x) .== vec(update(robot, x0, u)))
+    inputs = [u]
+    states = [x]
+    for i in 2:N
+        u = Input(@variable(model, [1:10], basename="u"))
+        setlimits!(u, robot)
+        x = State(@variable(model, [1:20], basename="x"))
+        setlimits!(x, robot)
+        @constraint(model, vec(x) .== vec(update(robot, states[end], u)))
+        push!(inputs, u)
+        push!(states, x)
+    end
+    setup_indicators!(model)
+    @objective(model, Min, 0.1 * sum([sum(vec(u).^2) for u in inputs]) + 10 * sum((vec(states[end]) .- [0.5, 0.5, zeros(18)...]).^2))
+    status = solve(model)
+    getvalue.(inputs), [x0, getvalue.(states)...]
+end
+
 
 end
     
