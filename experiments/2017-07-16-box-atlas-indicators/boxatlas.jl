@@ -384,7 +384,7 @@ function run_mpc(robot::BoxAtlas, x0::State, N=10;
     end
     setup_indicators!(model)
     obj = 0.01 * sum([sum(vec(u).^2) for u in inputs]) 
-    state_weights = [ones(20)..., 10]
+    state_weights = [ones(20)..., 1000]
     for state in states
         obj += 1 * sum(state_weights .* (vec(state) .- vec(xdesired)).^2)
     end

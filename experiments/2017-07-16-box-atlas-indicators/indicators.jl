@@ -31,7 +31,7 @@ state = Box.State(
 # state.position[Box.Trunk] = [0.5, state.position[Box.Trunk][2]]
 state.velocity[Box.Trunk] = [-2, 0]
 model.stiffness=1000
-model.viscous_friction = 1
+model.viscous_friction = 10
 model.Δt = 0.05
 us, xs = Box.run_mpc(model, state, 10, solver=GurobiSolver(TimeLimit=300))
 
