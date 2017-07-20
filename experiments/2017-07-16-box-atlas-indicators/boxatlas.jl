@@ -47,6 +47,13 @@ end
         LeftHand=>1.,
         RightHand=>1.
         )
+    moment_arms::Dict{Body, SVector{2, T}} = Dict(
+        LeftFoot=>SVector(0.2, -0.75),
+        RightFoot=>SVector(-0.2, -0.75),
+        LeftHand=>SVector(0.4, 0.1),
+        RightHand=>SVector(-0.4, 0.1)
+    )
+    centroidal_moment_of_inertia::T = 4.0
     stiffness::T = 100.
     damping::T = 10.
     gravity::T = 10.
@@ -57,11 +64,15 @@ end
 struct State{T}
     position::Dict{Body, SVector{2, T}}
     velocity::Dict{Body, SVector{2, T}}
+    angular_velocity::Dict{Body, T}
 end
+
+const STATE_LENGTH = 21
 
 convert(::Type{State}, x::AbstractVector{T}) where {T} = convert(State{T}, x)
 
 function convert(::Type{State{T}}, x::AbstractVector) where {T}
+    @assert length(x) == STATE_LENGTH
     State{T}(
         Dict(
             Trunk => x[1:2], 
@@ -76,7 +87,8 @@ function convert(::Type{State{T}}, x::AbstractVector) where {T}
             RightFoot => x[15:16],
             LeftHand => x[17:18],
             RightHand => x[19:20]
-            )
+            ),
+        Dict(Trunk=>x[21])
         )
 end
 
@@ -89,12 +101,13 @@ function Base.similar(x::State{T}, ::Type{T2}=T) where {T, T2}
     for (k, v) in x.velocity
         velocity[k] = zeros(SVector{2, T2})
     end
-    State(position, velocity)
+    State(position, velocity, Dict(Trunk=>zero(T2)))
 end
 
 JuMP.getvalue(s::State) = State(
     Dict([(body, getvalue.(p)) for (body, p) in s.position]),
-    Dict([(body, getvalue.(p)) for (body, p) in s.velocity]))
+    Dict([(body, getvalue.(p)) for (body, p) in s.velocity]),
+    Dict(Trunk=>getvalue(s.angular_velocity[Trunk])))
 
 vec(s::State) = convert(Array, vcat(
     s.position[Trunk],
@@ -106,7 +119,8 @@ vec(s::State) = convert(Array, vcat(
     s.velocity[LeftFoot],
     s.velocity[RightFoot],
     s.velocity[LeftHand],
-    s.velocity[RightHand]))
+    s.velocity[RightHand],
+    s.angular_velocity[Trunk]))
 
 struct Input{T}
     force::Dict{Body, SVector{2, T}}
@@ -150,6 +164,7 @@ struct StateUpdate{T}
     ground_contact_forces::Dict{Body, SVector{2, T}}
     wall_contact_forces::Dict{Body, SVector{2, T}}
     damping_forces::Dict{Body, SVector{2, T}}
+    centroidal_torque::Dict{Body, T}
 
     function StateUpdate{T}() where {T}
         bodies = [Trunk, LeftFoot, RightFoot, LeftHand, RightHand]
@@ -160,6 +175,7 @@ struct StateUpdate{T}
            Dict([body=>zeros(SVector{2, T}) for body in bodies]),
            Dict([body=>zeros(SVector{2, T}) for body in bodies]),
            Dict([body=>zeros(SVector{2, T}) for body in bodies]),
+           Dict(Trunk=>zero(T))
         )
         for body in bodies
             up.input_forces[body] = zeros(SVector{2, T})
@@ -177,7 +193,8 @@ function accelerations(robot::BoxAtlas, up::StateUpdate{T}) where {T}
     bodies = [Trunk, LeftFoot, RightFoot, LeftHand, RightHand]
     accelerations = Dict([body=>zeros(SVector{2, T}) for body in bodies])
     for body in bodies
-        accelerations[body] = sum(getfield(up, field)[body] for field in fieldnames(up)) ./ robot.masses[body]
+        fields = [:input_forces, :joint_limit_forces, :gravity_forces, :ground_contact_forces, :wall_contact_forces, :damping_forces]
+        accelerations[body] = sum(getfield(up, field)[body] for field in fields) ./ robot.masses[body]
     end
     for body in [LeftFoot, RightFoot, LeftHand, RightHand]
         # Non-inertial frame
@@ -186,9 +203,17 @@ function accelerations(robot::BoxAtlas, up::StateUpdate{T}) where {T}
     accelerations
 end
 
+function centroidal_torque(model::BoxAtlas, body::Body, force::AbstractVector)
+    @assert length(force) == 2
+    r = model.moment_arms[body]
+    r3 = SVector(r[1], 0, r[2])
+    f3 = SVector(force[1], 0, force[2])
+    t3 = cross(r3, f3)
+    t3[2]
+end
+
 function update(model::BoxAtlas, x::State{T1}, u::Input{T2}) where {T1, T2}
     Tnext = Base.promote_op(+, T1, T2)
-    xnext = similar(x, Tnext)
 
     up = StateUpdate{Tnext}()
     for (body, force) in u.force
@@ -242,6 +267,12 @@ function update(model::BoxAtlas, x::State{T1}, u::Input{T2}) where {T1, T2}
         up.damping_forces[Trunk] -= damping_force
     end
 
+    # Torques due to external forces
+    for body in keys(u.force)
+        up.centroidal_torque[Trunk] += centroidal_torque(model, body, up.ground_contact_forces[body])
+        up.centroidal_torque[Trunk] += centroidal_torque(model, body, up.wall_contact_forces[body])
+    end
+
     # # Apply soft velocity limits
     # for body in keys(u.force)
     #     force = zero(SVector{2, Tnext})
@@ -263,10 +294,12 @@ function update(model::BoxAtlas, x::State{T1}, u::Input{T2}) where {T1, T2}
     # end
     acceleration = accelerations(model, up)
 
+    xnext = similar(x, Tnext)
     for body in [Trunk, keys(u.force)...]
         xnext.velocity[body] = x.velocity[body] .+ acceleration[body] .* model.Δt
         xnext.position[body] = x.position[body] .+ x.velocity[body] .* model.Δt .+ 0.5 .* acceleration[body] .* model.Δt.^2
     end
+    xnext.angular_velocity[Trunk] = x.angular_velocity[Trunk] + up.centroidal_torque[Trunk] / model.centroidal_moment_of_inertia * model.Δt 
     xnext, up, acceleration
 end
 
@@ -319,15 +352,17 @@ function setlimits!(x::State{Variable}, robot::BoxAtlas)
         @assert all(getlowerbound.(velocity) .== lb)
         @assert all(getupperbound.(velocity) .== ub)
     end
+    setlowerbound(x.angular_velocity[Trunk], -2π)
+    setupperbound(x.angular_velocity[Trunk], 2π)
 end
 
 function run_mpc(robot::BoxAtlas, x0::State, N=10; 
         solver=GurobiSolver(), 
-        xdesired=State([0.5, 0.9, 0.2, -0.9, -0.2, -0.9, 0.4, 0.1, -0.4, 0.1, zeros(10)...]))
+        xdesired=State([0.5, 0.9, 0.2, -0.9, -0.2, -0.9, 0.4, 0.1, -0.4, 0.1, zeros(11)...]))
     model = Model(solver=solver)
     u = Input(@variable(model, [1:10], basename="u"))
     setlimits!(u, robot)
-    x = State(@variable(model, [1:20], basename="x"))
+    x = State(@variable(model, [1:STATE_LENGTH], basename="x"))
     setlimits!(x, robot)
     xnext, up, accel = update(robot, x0, u)
     @constraint(model, vec(x) .== vec(xnext))
@@ -338,7 +373,7 @@ function run_mpc(robot::BoxAtlas, x0::State, N=10;
     for i in 2:N
         u = Input(@variable(model, [1:10], basename="u"))
         setlimits!(u, robot)
-        x = State(@variable(model, [1:20], basename="x"))
+        x = State(@variable(model, [1:STATE_LENGTH], basename="x"))
         setlimits!(x, robot)
         xnext, up, accel = update(robot, states[end], u)
         @constraint(model, vec(x) .== vec(xnext))
@@ -348,11 +383,15 @@ function run_mpc(robot::BoxAtlas, x0::State, N=10;
         push!(accels, accel)
     end
     setup_indicators!(model)
-    obj = 0.1 * sum([sum(vec(u).^2) for u in inputs]) + 10 * sum((vec(states[end]) .- vec(xdesired)).^2)
+    obj = 0.01 * sum([sum(vec(u).^2) for u in inputs]) 
+    state_weights = [ones(20)..., 10]
+    for state in states
+        obj += 1 * sum(state_weights .* (vec(state) .- vec(xdesired)).^2)
+    end
     for up in updates
         for body in keys(u.force)
-            obj += up.ground_contact_forces[body][1]^2
-            obj += up.wall_contact_forces[body][2]^2
+            obj += 0.1 * up.ground_contact_forces[body][1]^2
+            obj += 0.1 * up.wall_contact_forces[body][2]^2
         end
     end
     @objective(model, Min, obj)
