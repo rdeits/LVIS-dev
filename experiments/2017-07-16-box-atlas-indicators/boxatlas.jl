@@ -8,7 +8,7 @@ using Parameters: @with_kw
 using CDDLib: CDDLibrary
 using StaticArrays: SVector
 using Gurobi: GurobiSolver
-using ConditionalJuMP: @disjunction, setup_indicators!
+using ConditionalJuMP
 import Base: convert, vec
 
 function from_bounds(lb::AbstractVector, ub::AbstractVector)
@@ -58,6 +58,7 @@ end
     damping::T = 10.
     gravity::T = 10.
     viscous_friction::T = 100.
+    μ::T = 0.5
     Δt::T = 0.1
 end
 
@@ -226,11 +227,11 @@ function update(model::BoxAtlas, x::State{T1}, u::Input{T2}) where {T1, T2}
         force = zero(SVector{2, Tnext})
         for face in HRepIter(model.position_limits[body])
             separation = -(face.a' * x.position[body] - face.β)
-            force += @disjunction if separation <= 0
-                separation .* model.stiffness .* face.a
-            else
+            force += ifelse(
+                @?(separation <= 0),
+                separation .* model.stiffness .* face.a,
                 zeros(face.a)
-            end
+            )
         end
         up.joint_limit_forces[body] = force
         up.joint_limit_forces[Trunk] -= force
@@ -244,21 +245,46 @@ function update(model::BoxAtlas, x::State{T1}, u::Input{T2}) where {T1, T2}
     # Ground contact
     for body in (LeftFoot, RightFoot)
         separation = x.position[Trunk][2] + x.position[body][2]
-        up.ground_contact_forces[body] = @disjunction if separation <= 0
-            (-separation .* model.stiffness .* SVector(0., 1) - model.viscous_friction .* (x.velocity[Trunk] .+ x.velocity[body]) .* SVector(1., 1))
-        else
-            zeros(SVector{2, Tnext})
-        end
+        viscous_friction = -model.viscous_friction * (x.velocity[Trunk][1] + x.velocity[body][1])
+        normal_force = ifelse(@?(separation <= 0), -separation * model.stiffness, zero(Tnext))
+        friction_lb = -model.μ * normal_force
+        friction_ub = -friction_lb
+        tangential_friction = @switch(
+            (viscous_friction ≤ friction_lb) => friction_lb,
+            ((viscous_friction ≥ friction_lb) & (viscous_friction ≤ friction_ub)) => viscous_friction,
+            (viscous_friction ≥ friction_ub) => friction_ub
+        )
+        up.ground_contact_forces[body] = [tangential_friction, normal_force]
+        # up.ground_contact_forces[body] = @disjunction if separation <= 0
+        #     (-separation .* model.stiffness .* SVector(0., 1) - model.viscous_friction .* (x.velocity[Trunk] .+ x.velocity[body]) .* SVector(1., 1))
+        # else
+        #     zeros(SVector{2, Tnext})
+        # end
     end
 
     # Wall contact
     body = RightHand
     separation = x.position[Trunk][1] + x.position[body][1]
-    up.wall_contact_forces[body] = @disjunction if separation <= 0
-        (-separation .* model.stiffness .* SVector(1., 0) - model.viscous_friction .* (x.velocity[Trunk] .+ x.velocity[body]) .* SVector(1., 1))
-    else
-        zeros(SVector{2, Tnext})
-    end
+    viscous_friction = -model.viscous_friction * (x.velocity[Trunk][2] + x.velocity[body][2]) 
+    normal_force = ifelse(@?(separation <= 0), -separation * model.stiffness, zero(Tnext)) 
+    friction_lb = -model.μ * normal_force
+    friction_ub = -friction_lb
+    tangential_friction = @switch(
+        (viscous_friction ≤ friction_lb) => friction_lb,
+        ((viscous_friction ≥ friction_lb) & (viscous_friction ≤ friction_ub)) => viscous_friction,
+        (viscous_friction ≥ friction_ub) => friction_ub
+    )
+    up.wall_contact_forces[body] = [normal_force, tangential_friction]
+    # up.wall_contact_forces[body] = @disjunction if separation <= 0
+    #     (-separation .* model.stiffness .* SVector(1., 0) - model.viscous_friction .* (x.velocity[Trunk] .+ x.velocity[body]) .* SVector(1., 1))
+    # else
+    #     zeros(SVector{2, Tnext})
+    # end
+    # up.wall_contact_forces[body] = @disjunction if separation <= 0
+    #     (-separation .* model.stiffness .* SVector(1., 0) - model.viscous_friction .* (x.velocity[Trunk] .+ x.velocity[body]) .* SVector(1., 1))
+    # else
+    #     zeros(SVector{2, Tnext})
+    # end
 
     # Damping
     for body in [Trunk, keys(u.force)...]
@@ -360,38 +386,48 @@ function run_mpc(robot::BoxAtlas, x0::State, N=10;
         solver=GurobiSolver(), 
         xdesired=State([0.5, 0.9, 0.2, -0.9, -0.2, -0.9, 0.4, 0.1, -0.4, 0.1, zeros(11)...]))
     model = Model(solver=solver)
-    u = Input(@variable(model, [1:10], basename="u"))
-    setlimits!(u, robot)
-    x = State(@variable(model, [1:STATE_LENGTH], basename="x"))
-    setlimits!(x, robot)
-    xnext, up, accel = update(robot, x0, u)
-    @constraint(model, vec(x) .== vec(xnext))
-    inputs = [u]
-    states = [x]
-    updates = [up]
-    accels = [accel]
-    for i in 2:N
-        u = Input(@variable(model, [1:10], basename="u"))
-        setlimits!(u, robot)
-        x = State(@variable(model, [1:STATE_LENGTH], basename="x"))
-        setlimits!(x, robot)
-        xnext, up, accel = update(robot, states[end], u)
-        @constraint(model, vec(x) .== vec(xnext))
-        push!(inputs, u)
-        push!(states, x)
+    inputs = [Input(@variable(model, [1:10], basename="u")) for i in 2:N]
+    setlimits!.(inputs, robot)
+    states = [State(@variable(model, [1:STATE_LENGTH], basename="x")) for i in 1:N]
+    setlimits!.(states, robot)
+    JuMP.fix.(vec(states[1]), vec(x0))
+    updates = []
+    accels = []
+
+
+    # u = Input(@variable(model, [1:10], basename="u"))
+    # setlimits!(u, robot)
+    # x = State(@variable(model, [1:STATE_LENGTH], basename="x"))
+    # setlimits!(x, robot)
+    # xnext, up, accel = update(robot, x0, u)
+    # @constraint(model, vec(x) .== vec(xnext))
+    # inputs = [u]
+    # states = [x]
+    # updates = [up]
+    # accels = [accel]
+    for i in 1:(N-1)
+        # u = Input(@variable(model, [1:10], basename="u"))
+        # setlimits!(u, robot)
+        # x = State(@variable(model, [1:STATE_LENGTH], basename="x"))
+        # setlimits!(x, robot)
+        xnext, up, accel = update(robot, states[i], inputs[i])
+        @constraint(model, vec(states[i + 1]) .== vec(xnext))
+        # push!(inputs, u)
+        # push!(states, x)
         push!(updates, up)
         push!(accels, accel)
     end
     setup_indicators!(model)
     obj = 0.01 * sum([sum(vec(u).^2) for u in inputs]) 
-    state_weights = [ones(20)..., 1000]
+    # state_weights = [ones(20)..., 1000]
+    state_weights = [100, 100, ones(18)..., 10]
     for state in states
         obj += 1 * sum(state_weights .* (vec(state) .- vec(xdesired)).^2)
     end
     for up in updates
-        for body in keys(u.force)
-            obj += 0.1 * up.ground_contact_forces[body][1]^2
-            obj += 0.1 * up.wall_contact_forces[body][2]^2
+        for body in keys(inputs[1].force)
+            obj += 0.01 * up.ground_contact_forces[body][1]^2
+            obj += 0.01 * up.wall_contact_forces[body][2]^2
         end
     end
     @objective(model, Min, obj)

@@ -11,7 +11,7 @@ model = Box.BoxAtlas(stiffness=1.0, damping=1.0, viscous_friction=100.)
 vis = Visualizer()[:boxatlas]
 setgeometry!(vis, model)
 
-state = Box.State(vcat(rand(2), randn(8), 5 * randn(11)))
+state = Box.State(vcat(rand(2), randn(8), 1 * randn(11)))
 input = Box.Input(zeros(8))
 model.stiffness = 10.
 model.damping = 10
@@ -28,19 +28,21 @@ end
 state = Box.State(
     [0.7, 0.75, 0.2, -0.75, -0.2, -0.75, 0.4, 0.1, -0.4, 0.1, zeros(11)...]
 )
-# state.position[Box.Trunk] = [0.5, state.position[Box.Trunk][2]]
-state.velocity[Box.Trunk] = [-2, 0]
+state.position[Box.Trunk] = [1.0, state.position[Box.Trunk][2]]
+# state.velocity[Box.Trunk] = [-2, 0]
 model.stiffness=1000
-model.viscous_friction = 10
-model.Δt = 0.05
-us, xs = Box.run_mpc(model, state, 10, solver=GurobiSolver(TimeLimit=300))
+model.viscous_friction = 100
+model.Δt = 0.1
+model.μ = 10
+solver = GurobiSolver(TimeLimit=300, MIPGap=0.1)
+us, xs = Box.run_mpc(model, state, 15, solver=solver)
 
 for x in xs
     settransform!(vis, model, x)
     sleep(0.1)
 end
 
-us_next, xs_next = Box.run_mpc(model, xs[end], 10, solver=GurobiSolver(TimeLimit=300))
+us_next, xs_next = Box.run_mpc(model, xs[end], 10, solver=solver)
 us = vcat(us, us_next)
 xs = vcat(xs, xs_next)
 for x in xs
