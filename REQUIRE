@@ -23,3 +23,9 @@ PyCall 1.12.0
 PyPlot 2.3.2
 ReverseDiff 0.1.4
 StaticArrays 0.6.0
+RigidBodyDynamics
+RigidBodyTreeInspector
+Revise
+PkgDev
+Permutations
+BenchmarkTools
