@@ -157,7 +157,7 @@ function run_mpc(x0::MechanismState,
     end
     status = solve(model, suppress_warnings=true)
     if status == :Infeasible
-        return MPCResults{Float64}(null, null)
+        return MPCResults{Float64}(nothing, nothing)
     end
     
     
@@ -170,12 +170,15 @@ function run_mpc(x0::MechanismState,
     nvars = length(model.colCat)
     vars = [Variable(model, i) for i in 1:nvars]
     @objective model Min objective + QuadExpr(vars, vars, [1e-6 for v in vars], AffExpr([], [], 0.0))
-    solve(model)
+    status = solve(model)
+    if status != :Optimal
+        return MPCResults{Float64}(getvalue.(results_opt), nothing)
+    end
     exsol = try
         ExplicitQPs.explicit_solution(model, vcat(q0, v0))
     catch e
         if isa(e, Base.LinAlg.SingularException)
-            return MPCResults{Float64}(getvalue.(results_opt), null)
+            return MPCResults{Float64}(getvalue.(results_opt), nothing)
         else
             rethrow(e)
         end
