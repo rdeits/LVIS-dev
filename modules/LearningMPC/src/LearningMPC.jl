@@ -1,3 +1,5 @@
+__precompile__()
+
 module LearningMPC
 
 using LCPSim: LCPUpdate, contact_force 
