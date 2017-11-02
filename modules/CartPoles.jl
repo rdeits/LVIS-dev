@@ -140,8 +140,10 @@ function lqr_cost(results::AbstractVector{<:LCPSim.LCPUpdate}, lqr::LQRSolution,
         (results[end].state.state .- lqr.x0)' * lqr.S * (results[end].state.state .- lqr.x0))
 end
 
+joint_limit_cost(up::LCPSim.LCPUpdate) = sum([sum(jc.λ .^ 2) for jc in up.joint_contacts])
+
 function joint_limit_cost(results::AbstractVector{<:LCPSim.LCPUpdate})
-    return sum(joint_result.λ^2 for r in results for (joint, jrs) in r.joint_contacts for joint_result in jrs)
+    return sum(joint_limit_cost, results)
 end
 
 function create_initial_state(model::Model, x0::MechanismState)
@@ -265,19 +267,20 @@ function run_mpc_online(x0::MechanismState,
                  lqr::LQRSolution,
                  x_nominal::MechanismState,
                  warmstart_controllers::AbstractVector{<:Function},
-                 solver=GurobiSolver())::Vector{Float64}
+                 solver=GurobiSolver(Gurobi.Env()))::Vector{Float64}
     N = params.horizon
     Δt = params.Δt
     q0 = copy(configuration(x0))
     v0 = copy(velocity(x0))
     cost = results -> (lqr_cost(results, lqr, Δt) + joint_limit_cost(results))
 
-    Δt_sim = 0.01
+    # Δt_sim = 0.01
+    Δt_sim = Δt
     time_ratio = convert(Int, Δt / Δt_sim)
     warmstarts = map(warmstart_controllers) do controller
         configuration(x0) .= q0
         velocity(x0) .= v0
-        LCPSim.simulate(x0, controller, env, Δt_sim, time_ratio * N, GurobiSolver(OutputFlag=0))
+        LCPSim.simulate(x0, controller, env, Δt_sim, time_ratio * N, solver)
     end
 
     warmstarts = filter(x -> !isempty(x), warmstarts)
@@ -290,7 +293,8 @@ function run_mpc_online(x0::MechanismState,
         best_warmstart = warmstarts[idx]
         configuration(x0) .= q0
         velocity(x0) .= v0
-        model, results_opt = LCPSim.optimize(x0, env, Δt, length(best_warmstart))
+        model, results_opt = LCPSim.optimize(x0, env, Δt_sim, best_warmstart)
+        setsolver(model, solver)
         @objective model Min cost(results_opt)
         setvalue.(results_opt, best_warmstart)
         ConditionalJuMP.warmstart!(model, true)
@@ -335,15 +339,19 @@ end
 function (c::OnlineMPCController)(x0::Union{MechanismState, LCPSim.StateRecord})
     set_configuration!(c.scratch_state, configuration(x0))
     set_velocity!(c.scratch_state, velocity(x0))
-    run_mpc_online(c.scratch_state, 
-                   c.cartpole.environment,
-                   c.params, 
-                   c.lqr,
-                   c.nominal_state, 
-                   c.warmstart_controllers,
-                   GurobiSolver(OutputFlag=0, 
-                                MIPGap=c.params.gap,
-                                TimeLimit=c.params.timelimit))
+    env = Gurobi.Env()
+    try
+        run_mpc_online(c.scratch_state, 
+                       c.cartpole.environment,
+                       c.params, 
+                       c.lqr,
+                       c.nominal_state, 
+                       c.warmstart_controllers,
+                       GurobiSolver(env,
+                                    OutputFlag=0))
+    finally
+        Gurobi.free_env(env)
+    end
 end
 
 end
