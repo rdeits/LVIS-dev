@@ -340,18 +340,14 @@ function (c::OnlineMPCController)(x0::Union{MechanismState, LCPSim.StateRecord})
     set_configuration!(c.scratch_state, configuration(x0))
     set_velocity!(c.scratch_state, velocity(x0))
     env = Gurobi.Env()
-    try
-        run_mpc_online(c.scratch_state, 
-                       c.cartpole.environment,
-                       c.params, 
-                       c.lqr,
-                       c.nominal_state, 
-                       c.warmstart_controllers,
-                       GurobiSolver(env,
-                                    OutputFlag=0))
-    finally
-        Gurobi.free_env(env)
-    end
+    run_mpc_online(c.scratch_state, 
+                   c.cartpole.environment,
+                   c.params, 
+                   c.lqr,
+                   c.nominal_state, 
+                   c.warmstart_controllers,
+                   GurobiSolver(env,
+                                OutputFlag=0))
 end
 
 end
