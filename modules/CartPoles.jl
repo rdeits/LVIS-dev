@@ -170,12 +170,6 @@ function run_mpc(x0::MechanismState,
     ustar = zeros(num_velocities(x_nominal))
     xstar = vcat(qstar, vstar)
 
-    # contacts = Point3D[]
-    # v0 = copy(velocity(x0))
-    # set_velocity!(x0, zeros(num_velocities(x0)))
-    # K, S = LCPSim.ContactLQR.contact_lqr(x0, zeros(num_velocities(x0)), params.Q, params.R, contacts)
-    # set_velocity!(x0, v0)
-    
     model = Model(solver=solver)
     x0_var = create_initial_state(model, x0)
     _, results_opt = LCPSim.optimize(x0_var, env, Δt, N, model)
@@ -183,19 +177,6 @@ function run_mpc(x0::MechanismState,
     cost = results -> (lqr_cost(results, lqr, Δt) + joint_limit_cost(results))
 
     objective = cost(results_opt)
-    
-    # objective = (
-    #     sum(Δt * (r.state.state' * params.Q * r.state.state + r.input' * params.R * r.input) for r in results_opt)
-    #    + (results_opt[end].state.state' * S * results_opt[end].state.state)
-    #     )
-
-    # for r in results_opt
-    #     for (joint, jrs) in r.joint_contacts
-    #         for joint_result in jrs
-    #             objective += joint_result.λ^2
-    #         end
-    #     end 
-    # end
     @objective model Min objective
 
     if !isempty(warmstart_controllers)
@@ -218,27 +199,14 @@ function run_mpc(x0::MechanismState,
         end
     end
 
-    # controller = x -> begin
-    #     -K * (state_vector(x) - vcat(qstar, vstar)) .+ ustar
-    # end
-    
-    # Δt_sim = 0.01
-    # time_ratio = convert(Int, Δt / Δt_sim)
-    # results_lqr = LCPSim.simulate(x0, controller, env, Δt_sim, time_ratio * N, GurobiSolver(OutputFlag=0))
-    # if length(results_lqr[1:time_ratio:end]) == length(results_opt)
-    #     setvalue.(results_opt, results_lqr[1:time_ratio:end])
-    #     ConditionalJuMP.warmstart!(model, false)
-    # end
     status = solve(model, suppress_warnings=true)
     if status == :Infeasible
         return MPCResults{Float64}(nothing, nothing)
     end
     
-    
     # Now fix the binary variables and re-solve to get updated duals
     ConditionalJuMP.warmstart!(model, true)
     @assert sum(model.colCat .== :Bin) == 0 "Model should no longer have any binary variables"
-    
     
     # Ensure objective is strictly PD
     nvars = length(model.colCat)
