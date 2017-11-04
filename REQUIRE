@@ -1,4 +1,5 @@
 AxisArrays
+BenchmarkTools
 Cbc
 CDDLib
 ConditionalJuMP 0.0.2
@@ -12,10 +13,13 @@ IJulia 1.5.0
 Interact 0.4.5
 IntervalArithmetic
 JLD
+JLD2
 JuMP 0.16.2
 Meshing
 MLDataPattern 0.1.0
 Parameters 0.7.2
+Permutations
+PkgDev
 Plots 0.12.0
 Polyhedra
 ProfileView
@@ -23,11 +27,7 @@ ProgressMeter 0.3.4
 PyCall 1.12.0
 PyPlot 2.3.2
 ReverseDiff 0.1.4
-StaticArrays 0.6.0
+Revise
 RigidBodyDynamics
 RigidBodyTreeInspector
-Revise
-PkgDev
-Permutations
-BenchmarkTools
-JLD2
+StaticArrays 0.6.0
