@@ -96,8 +96,9 @@ end
 function LQRSolution(x0::MechanismState, u0::AbstractVector, Q::AbstractMatrix{T}, R::AbstractMatrix{T}, contacts::AbstractVector{<:Point3D}=Point3D[]) where T
     v0 = copy(velocity(x0))
     velocity(x0) .= 0
+    RigidBodyDynamics.setdirty!(x0)
     K, S = LCPSim.ContactLQR.contact_lqr(x0, zeros(num_velocities(x0)), Q, R, contacts)
-    velocity(x0) .= v0
+    set_velocity!(x0, v0)
     LQRSolution{T}(Q, R, K, S, copy(state_vector(x0)), u0)
 end
 
@@ -141,6 +142,7 @@ function (c::MPCController)(x0::Union{MechanismState, LCPSim.StateRecord})
     env = Gurobi.Env()
     solver = GurobiSolver(env,
                           OutputFlag=1,
+                          FeasibilityTol=1e-4,
                           MIPGap=c.params.gap,
                           TimeLimit=c.params.timelimit)
     results = run_mpc(c.scratch_state,
@@ -187,22 +189,18 @@ function run_mpc(x0::MechanismState,
     N = params.horizon
     Δt = params.Δt
     q0 = copy(configuration(x0))
-    v0 = copy(configuration(x0))
+    v0 = copy(velocity(x0))
 
     model = Model(solver=solver)
     x0_var = create_initial_state(model, x0)
-    _, results_opt = LCPSim.optimize(x0_var, env, Δt, N, model)
-
     cost = results -> (lqr_cost(results, lqr, Δt) + joint_limit_cost(results))
 
-    objective = cost(results_opt)
-    @objective model Min objective
 
-
+    has_warmstart = false
     if !isempty(warmstart_controllers)
         warmstarts = map(warmstart_controllers) do controller
-            configuration(x0) .= q0
-            velocity(x0) .= v0
+            set_configuration!(x0, q0)
+            set_velocity!(x0, v0)
             LCPSim.simulate(x0, controller, env, Δt, N, GurobiSolver(Gurobi.Env(), OutputFlag=0))
         end
 
@@ -212,10 +210,20 @@ function run_mpc(x0::MechanismState,
             idx = indmin(cost.(warmstarts))
             best_warmstart = warmstarts[idx]
 
-            setvalue.(results_opt[1:length(best_warmstart)], best_warmstart)
-            ConditionalJuMP.warmstart!(model, false)
+            if length(best_warmstart) == N
+                _, results_opt = LCPSim.optimize(x0_var, env, Δt, best_warmstart, model)
+                has_warmstart = true
+            end
         end
     end
+    @show has_warmstart
+
+    if !has_warmstart
+        _, results_opt = LCPSim.optimize(x0_var, env, Δt, N, model)
+    end
+
+    objective = cost(results_opt)
+    @objective model Min objective
 
     status = solve(model, suppress_warnings=true)
     @show status
@@ -269,8 +277,8 @@ function run_mpc_online(x0::MechanismState,
     Δt_sim = Δt
     time_ratio = convert(Int, Δt / Δt_sim)
     warmstarts = map(warmstart_controllers) do controller
-        configuration(x0) .= q0
-        velocity(x0) .= v0
+        set_configuration!(x0, q0)
+        set_velocity!(x0, v0)
         LCPSim.simulate(x0, controller, env, Δt_sim, time_ratio * N, solver)
     end
 
@@ -282,8 +290,8 @@ function run_mpc_online(x0::MechanismState,
     else
         idx = indmin(cost.(warmstarts))
         best_warmstart = warmstarts[idx]
-        configuration(x0) .= q0
-        velocity(x0) .= v0
+        set_configuration!(x0, q0)
+        set_velocity!(x0, v0)
         model, results_opt = LCPSim.optimize(x0, env, Δt_sim, best_warmstart)
         setsolver(model, solver)
         @objective model Min cost(results_opt)
