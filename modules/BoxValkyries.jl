@@ -114,7 +114,6 @@ end
 mutable struct MPCController{T, M <: MechanismState}
     boxval::BoxValkyrie{T}
     params::BoxValkyrieMPCParams{T}
-    nominal_state::M
     scratch_state::M
     lqr::LQRSolution{T}
     warmstart_controllers::Vector{Function}
@@ -123,15 +122,13 @@ end
 
 function MPCController(boxval::BoxValkyrie,
                        params::BoxValkyrieMPCParams,
-                       nominal_state::MechanismState,
                        lqr::LQRSolution,
                        warmstart_controllers::AbstractVector{<:Function})
     scratch_state = MechanismState(boxval.mechanism,
-                                   zeros(num_positions(nominal_state)),
-                                   zeros(num_velocities(nominal_state)))
+                                   zeros(num_positions(boxval.mechanism)),
+                                   zeros(num_velocities(boxval.mechanism)))
     MPCController(boxval,
                   params,
-                  nominal_state,
                   scratch_state,
                   lqr,
                   warmstart_controllers,
@@ -141,22 +138,24 @@ end
 function (c::MPCController)(x0::Union{MechanismState, LCPSim.StateRecord})
     set_configuration!(c.scratch_state, configuration(x0))
     set_velocity!(c.scratch_state, velocity(x0))
+    env = Gurobi.Env()
+    solver = GurobiSolver(env,
+                          OutputFlag=1,
+                          MIPGap=c.params.gap,
+                          TimeLimit=c.params.timelimit)
     results = run_mpc(c.scratch_state,
                       c.boxval.environment,
                       c.params,
                       c.lqr,
-                      c.nominal_state,
                       c.warmstart_controllers,
-                      GurobiSolver(OutputFlag=0,
-                                   MIPGap=c.params.gap,
-                                   TimeLimit=c.params.timelimit))
+                      solver)
     set_configuration!(c.scratch_state, configuration(x0))
     set_velocity!(c.scratch_state, velocity(x0))
     c.callback(c.scratch_state, results)
     if !isnull(results.lcp_updates)
         return get(results.lcp_updates)[1].input
     else
-        return zeros(num_velocities(c.nominal_state))
+        return zeros(length(c.lqr.u0))
     end
 end
 
@@ -183,17 +182,12 @@ function run_mpc(x0::MechanismState,
                  env::Environment,
                  params::BoxValkyrieMPCParams,
                  lqr::LQRSolution,
-                 x_nominal::MechanismState=x0,
                  warmstart_controllers::AbstractVector{<:Function}=[],
-                 solver=GurobiSolver())
+                 solver=GurobiSolver(Gurobi.Env(), OutputFlag=0))
     N = params.horizon
     Δt = params.Δt
     q0 = copy(configuration(x0))
     v0 = copy(configuration(x0))
-    qstar = copy(configuration(x_nominal))
-    vstar = zeros(num_velocities(x_nominal))
-    ustar = zeros(num_velocities(x_nominal))
-    xstar = vcat(qstar, vstar)
 
     model = Model(solver=solver)
     x0_var = create_initial_state(model, x0)
@@ -204,13 +198,12 @@ function run_mpc(x0::MechanismState,
     objective = cost(results_opt)
     @objective model Min objective
 
+
     if !isempty(warmstart_controllers)
-        Δt_sim = 0.01
-        time_ratio = convert(Int, Δt / Δt_sim)
         warmstarts = map(warmstart_controllers) do controller
             configuration(x0) .= q0
             velocity(x0) .= v0
-            LCPSim.simulate(x0, controller, env, Δt_sim, time_ratio * N, GurobiSolver(OutputFlag=0))
+            LCPSim.simulate(x0, controller, env, Δt, N, GurobiSolver(Gurobi.Env(), OutputFlag=0))
         end
 
         warmstarts = filter(x -> !isempty(x), warmstarts)
@@ -219,18 +212,24 @@ function run_mpc(x0::MechanismState,
             idx = indmin(cost.(warmstarts))
             best_warmstart = warmstarts[idx]
 
-            setvalue.(results_opt[1:round(Int, length(best_warmstart) / time_ratio)], best_warmstart[1:time_ratio:end])
+            setvalue.(results_opt[1:length(best_warmstart)], best_warmstart)
             ConditionalJuMP.warmstart!(model, false)
         end
     end
 
     status = solve(model, suppress_warnings=true)
-    if status == :Infeasible
+    @show status
+    if any(isnan, JuMP.getvalue(results_opt[1].input))
         return MPCResults{Float64}(nothing, nothing)
     end
 
     # Now fix the binary variables and re-solve to get updated duals
     ConditionalJuMP.warmstart!(model, true)
+    for i in 1:length(model.colCat)
+      if model.colCat[i] == :Bin
+        @show Variable(model, i)
+      end
+    end
     @assert sum(model.colCat .== :Bin) == 0 "Model should no longer have any binary variables"
 
     # Ensure objective is strictly PD
@@ -258,9 +257,8 @@ function run_mpc_online(x0::MechanismState,
                  env::Environment,
                  params::BoxValkyrieMPCParams,
                  lqr::LQRSolution,
-                 x_nominal::MechanismState,
                  warmstart_controllers::AbstractVector{<:Function},
-                 solver=GurobiSolver(Gurobi.Env()))::Vector{Float64}
+                 solver=GurobiSolver(Gurobi.Env(silent=true)))::Vector{Float64}
     N = params.horizon
     Δt = params.Δt
     q0 = copy(configuration(x0))
@@ -305,7 +303,6 @@ end
 mutable struct OnlineMPCController{T, M <: MechanismState}
     boxval::BoxValkyrie{T}
     params::BoxValkyrieMPCParams{T}
-    nominal_state::M
     scratch_state::M
     lqr::LQRSolution{T}
     warmstart_controllers::Vector{Function}
@@ -314,15 +311,13 @@ end
 
 function OnlineMPCController(boxval::BoxValkyrie,
                        params::BoxValkyrieMPCParams,
-                       nominal_state::MechanismState,
                        lqr::LQRSolution,
                        warmstart_controllers::AbstractVector{<:Function})
     scratch_state = MechanismState(boxval.mechanism,
-                                   zeros(num_positions(nominal_state)),
-                                   zeros(num_velocities(nominal_state)))
+                                   zeros(num_positions(boxval.mechanism)),
+                                   zeros(num_velocities(boxval.mechanism)))
     OnlineMPCController(boxval,
                   params,
-                  nominal_state,
                   scratch_state,
                   lqr,
                   warmstart_controllers,
@@ -337,7 +332,6 @@ function (c::OnlineMPCController)(x0::Union{MechanismState, LCPSim.StateRecord})
                    c.boxval.environment,
                    c.params,
                    c.lqr,
-                   c.nominal_state,
                    c.warmstart_controllers,
                    GurobiSolver(env,
                                 OutputFlag=0))
