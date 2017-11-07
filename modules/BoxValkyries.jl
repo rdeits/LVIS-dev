@@ -66,7 +66,7 @@ function BoxValkyrie()
 end
 
 @with_kw struct BoxValkyrieMPCParams{T}
-    Q::Matrix{T} = diagm([100, 0.1, 10, fill(0.1, 8)..., 10, fill(0.1, 10)...])
+    Q::Matrix{T} = diagm([1, 2, 10, fill(0.1, 8)..., 10, fill(0.1, 10)...])
     R::Matrix{T} = diagm(fill(0.1, 11))
     Δt::T = 0.05
     gap = 1e-2
