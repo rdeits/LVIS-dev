@@ -66,12 +66,28 @@ function BoxValkyrie()
 end
 
 @with_kw struct BoxValkyrieMPCParams{T}
-    Q::Matrix{T} = diagm([1, 2, 10, fill(0.1, 8)..., 10, fill(0.1, 10)...])
-    R::Matrix{T} = diagm(fill(0.1, 11))
-    Δt::T = 0.05
+    Q::Matrix{T} = diagm([
+        0.01,
+        2,
+        100,
+        0.1, # rhx
+        0.1, # lhx
+        1,   # rfx
+        1,   # lfx
+        0.1, # rhz
+        0.1, # lhz
+        0.1,   # rfz
+        0.1,   # lfz
+        10,
+        1,
+        100,
+        fill(0.01, 8)...
+        ])
+    R::Matrix{T} = diagm(fill(0.0005, 11))
+    Δt::T = 0.04
     gap = 1e-2
     timelimit = 60
-    horizon = 20
+    horizon = 30
 end
 
 function nominal_input(val::BoxValkyrie, x0::MechanismState)
