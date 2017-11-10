@@ -157,7 +157,7 @@ function (c::MPCController)(x0::Union{MechanismState, LCPSim.StateRecord})
     set_velocity!(c.scratch_state, velocity(x0))
     env = Gurobi.Env()
     solver = GurobiSolver(env,
-                          OutputFlag=1,
+                          OutputFlag=0,
                           FeasibilityTol=1e-4,
                           MIPGap=c.params.gap,
                           TimeLimit=c.params.timelimit)
@@ -178,10 +178,23 @@ function (c::MPCController)(x0::Union{MechanismState, LCPSim.StateRecord})
     end
 end
 
-function lqr_cost(results::AbstractVector{<:LCPSim.LCPUpdate}, lqr::LQRSolution, Δt)
-    return (sum(Δt * ((r.state.state .- lqr.x0)' * lqr.Q * (r.state.state .- lqr.x0) + (r.input .- lqr.u0)' * lqr.R * (r.input .- lqr.u0)) for r in results) +
-        (results[end].state.state .- lqr.x0)' * lqr.S * (results[end].state.state .- lqr.x0))
+function lqr_cost(results::AbstractVector{<:LCPSim.LCPUpdate},
+                  x0::AbstractVector,
+                  u0::AbstractVector,
+                  Q::AbstractMatrix,
+                  R::AbstractMatrix,
+                  Qf::AbstractMatrix)
+    return (sum(
+                (r.state.state .- x0)' * Q * (r.state.state .- x0) +
+                (r.input .- u0)' * R * (r.input .- u0) 
+                for r in results)  +
+            (results[end].state.state .- x0)' * Qf * (results[end].state.state .- x0))
 end
+
+# function lqr_cost(results::AbstractVector{<:LCPSim.LCPUpdate}, lqr::LQRSolution, Δt)
+#     return (sum(Δt * ((r.state.state .- lqr.x0)' * lqr.Q * (r.state.state .- lqr.x0) + (r.input .- lqr.u0)' * lqr.R * (r.input .- lqr.u0)) for r in results) +
+#         (results[end].state.state .- lqr.x0)' * lqr.S * (results[end].state.state .- lqr.x0))
+# end
 
 joint_limit_cost(up::LCPSim.LCPUpdate) = sum([sum(jc.λ .^ 2) for jc in up.joint_contacts])
 
@@ -205,93 +218,48 @@ function _run_optimization(boxval, x0, env, Δt, N; x_nominal=x0, solver=GurobiS
     
     current_feet_positions = [transform_to_root(x0, default_frame(foot)) * Point3D(default_frame(foot), SVector(0., 0, 0)) for foot in feet]
     qstar[1] = mean([p.v[1] for p in current_feet_positions])
-        
-    model, results_opt = LCPSim.optimize(x0, env, Δt, N, Model(solver=solver))
 
-    qqf = zeros(num_positions(x0))
-    qqf[configuration_range(x0, findjoint(x0.mechanism, "base_x"))]        .= 0
-    qqf[configuration_range(x0, findjoint(x0.mechanism, "base_z"))]        .= 100
-    qqf[configuration_range(x0, findjoint(x0.mechanism, "base_rotation"))] .= 10
-    qqf[configuration_range(x0, findjoint(x0.mechanism, "core_to_rh_x"))]  .= 1
-    qqf[configuration_range(x0, findjoint(x0.mechanism, "core_to_lh_x"))]  .= 1
-    qqf[configuration_range(x0, findjoint(x0.mechanism, "core_to_rf_x"))]  .= 10
-    qqf[configuration_range(x0, findjoint(x0.mechanism, "core_to_lf_x"))]  .= 10
-    qqf[configuration_range(x0, findjoint(x0.mechanism, "core_to_rh_z"))]  .= 1
-    qqf[configuration_range(x0, findjoint(x0.mechanism, "core_to_lh_z"))]  .= 1
-    qqf[configuration_range(x0, findjoint(x0.mechanism, "core_to_rf_z"))]  .= 1
-    qqf[configuration_range(x0, findjoint(x0.mechanism, "core_to_lf_z"))]  .= 1
-    qvf = zeros(num_positions(x0))
-    Qf = diagm(vcat(qqf, qvf))
+    contacts = [Point3D(default_frame(body), SVector(0., 0, 0)) for body in feet]
 
-    w = 0.1 * ones(num_positions(x0))
-    w[1] = 0
-    w[2] = 10
-    w[3] = 1
-    w[6:7] = 1
-
-    Δxf = vcat(configuration(results_opt[end].state) .- qstar,
-               velocity(results_opt[end].state) .- vstar)
-    
-    objective = (
-        Δxf' * Qf * Δxf
-        # + 10 * sum(w .* (qstar .- configuration(results_opt[end].state)).^2)
-        )
-    
     qq = zeros(num_positions(x0))
-    qq[configuration_range(x0, findjoint(x0.mechanism, "base_x"))]        .= 0
-    qq[configuration_range(x0, findjoint(x0.mechanism, "base_z"))]        .= 0.1
-    qq[configuration_range(x0, findjoint(x0.mechanism, "base_rotation"))] .= 0.1
+    qq[configuration_range(x0, findjoint(x0.mechanism, "base_x"))]        .= 100
+    qq[configuration_range(x0, findjoint(x0.mechanism, "base_z"))]        .= 100
+    qq[configuration_range(x0, findjoint(x0.mechanism, "base_rotation"))] .= 10
     qq[configuration_range(x0, findjoint(x0.mechanism, "core_to_rh_x"))]  .= 0.01
     qq[configuration_range(x0, findjoint(x0.mechanism, "core_to_lh_x"))]  .= 0.01
     qq[configuration_range(x0, findjoint(x0.mechanism, "core_to_rf_x"))]  .= 0.01
     qq[configuration_range(x0, findjoint(x0.mechanism, "core_to_lf_x"))]  .= 0.01
-    qq[configuration_range(x0, findjoint(x0.mechanism, "core_to_rh_z"))]  .= 0.01
-    qq[configuration_range(x0, findjoint(x0.mechanism, "core_to_lh_z"))]  .= 0.01
+    qq[configuration_range(x0, findjoint(x0.mechanism, "core_to_rh_z"))]  .= 0.1
+    qq[configuration_range(x0, findjoint(x0.mechanism, "core_to_lh_z"))]  .= 0.1
     qq[configuration_range(x0, findjoint(x0.mechanism, "core_to_rf_z"))]  .= 0.01
     qq[configuration_range(x0, findjoint(x0.mechanism, "core_to_lf_z"))]  .= 0.01
 
-    qv = zeros(num_velocities(x0))
+    qv = fill(1e-4, num_velocities(x0))
     qv[velocity_range(x0, findjoint(x0.mechanism, "base_x"))] .= 0.1
 
-    Q = diagm(vcat(qq, qv))
-    R = diagm(fill(0.0001, num_velocities(x0)))
 
-    w[6:7] = 0.1
-    w[2] = 1
-    w .*= 0.1
-    @show w
-    @show diag(Q)
-    
-    for r in results_opt
-        Δx = vcat(configuration(r.state) .- qstar,
-                  velocity(r.state) .- vstar)
-        objective += (
-            0
-            + r.input' * R * r.input
-            # + 0.0001 * sum((r.input).^2)
-            + Δx' * Q * Δx
-            # + sum(w .* (qstar .- configuration(r.state)).^2)
-            # + 0.1 * velocity(r.state)[1]^2
-            )
-            
-    end
+    Q = diagm(vcat(qq, qv))
+    rr = fill(0.002, num_velocities(x0))
+    rr[velocity_range(x0, findjoint(x0.mechanism, "core_to_rf_x"))] .= 0.01
+    rr[velocity_range(x0, findjoint(x0.mechanism, "core_to_lf_x"))] .= 0.01
+    rr[velocity_range(x0, findjoint(x0.mechanism, "core_to_rf_z"))] .= 0.01
+    rr[velocity_range(x0, findjoint(x0.mechanism, "core_to_lf_z"))] .= 0.01
+    R = diagm(rr)
+    Δt_sim = Δt
+    K, S = LCPSim.ContactLQR.contact_dlqr(x_nominal, ustar, Q, R, contacts, Δt_sim)
+
+    model, results_opt = LCPSim.optimize(x0, env, Δt, N, Model(solver=solver))
+
+    objective = lqr_cost(results_opt, 
+                         vcat(qstar, vstar),
+                         ustar,
+                         Q, 
+                         R,
+                         S)
 
     objective += joint_limit_cost(results_opt)
     
     @objective model Min objective
-
-    
-    contacts = [Point3D(default_frame(body), SVector(0., 0, 0)) for body in feet]
-    # qq = [100, 0.1, 1, fill(0.1, num_positions(x0) - 3)...]
-    # Q = diagm(vcat(qq, fill(0.1, num_velocities(x0))))
-    # R = 0.001 * eye(num_velocities(x0))
-    # K, S = LCPSim.ContactLQR.contact_lqr(MechanismState(x0.mechanism, qstar, vstar), 
-    #         ustar, Q, R, contacts)
-    qq = [100, 0.1, 10, fill(0.1, num_positions(x0) - 3)...]
-    Q = diagm(vcat(qq, fill(0.1, num_velocities(x0))))
-    R = 0.01 * eye(num_velocities(x0))
-    Δt_sim = Δt
-    K, S = LCPSim.ContactLQR.contact_dlqr(MechanismState(x0.mechanism, qstar, vstar), ustar, Q, R, contacts, Δt_sim)
 
     controller = x -> begin
         -K * (state_vector(x) - vcat(qstar, vstar)) .+ ustar
@@ -302,7 +270,8 @@ function _run_optimization(boxval, x0, env, Δt, N; x_nominal=x0, solver=GurobiS
     ConditionalJuMP.warmstart!(model, false)
     
     solve(model)
-    getvalue.(results_opt)
+    results = getvalue.(results_opt)
+    results
 end
 
 function run_mpc(boxval::BoxValkyrie,
@@ -323,6 +292,7 @@ function run_mpc(boxval::BoxValkyrie,
     Δt = params.Δt
     q0 = copy(configuration(x0))
     v0 = copy(velocity(x0))
+    
 
     model = Model(solver=solver)
     x0_var = create_initial_state(model, x0)
