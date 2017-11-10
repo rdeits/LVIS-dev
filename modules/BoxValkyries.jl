@@ -287,12 +287,17 @@ function run_mpc(boxval::BoxValkyrie,
                              solver=solver)
     return MPCResults{Float64}(results, nothing)
 
+    # TODO: NONE OF THE BELOW CODE IS EXECUTED ANYMORE. We should take the 
+    # _run_optimization function and inline it here, replacing the existing
+    # optimization. Also, the `LQRSolution` argument doesn't really make sense
+    # now that we want to re-compute the LQR around the current pose. 
+
 
     N = params.horizon
     Δt = params.Δt
     q0 = copy(configuration(x0))
     v0 = copy(velocity(x0))
-    
+
 
     model = Model(solver=solver)
     x0_var = create_initial_state(model, x0)
