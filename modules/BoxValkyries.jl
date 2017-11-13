@@ -21,7 +21,7 @@ struct BoxValkyrie{T}
     environment::Environment{T}
 end
 
-const urdf = joinpath(Pkg.dir("LCPSim"), "examples", "box_valkyrie.urdf")
+const urdf = joinpath(@__DIR__, "box_valkyrie.urdf")
 
 function DrakeVisualizer.setgeometry!(basevis::Visualizer, boxval::BoxValkyrie)
     vis = basevis[:robot]
@@ -77,8 +77,8 @@ function nominal_input(val::BoxValkyrie, x0::MechanismState)
     u_nominal = clamp.(inverse_dynamics(x0, zeros(num_velocities(x0))), LCPSim.all_effort_bounds(x0.mechanism))
     feet = findbody.(x0.mechanism, ["rf", "lf"])
     weight = mass(x0.mechanism) * mechanism.gravitational_acceleration.v[3]
-    u_nominal[parentindexes(velocity(x0, findjoint(x0.mechanism, "core_to_rf_z")))...] += weight / 2
-    u_nominal[parentindexes(velocity(x0, findjoint(x0.mechanism, "core_to_lf_z")))...] += weight / 2
+    u_nominal[parentindexes(velocity(x0, findjoint(x0.mechanism, "core_to_rf_extension")))...] -= weight / 2
+    u_nominal[parentindexes(velocity(x0, findjoint(x0.mechanism, "core_to_lf_extension")))...] -= weight / 2
     u_nominal
 end
 
@@ -107,36 +107,43 @@ LQRController(c::LQRSolution) = x -> -c.K * (state_vector(x) .- c.x0) .+ c.u0
 
 function default_costs(x::MechanismState)
     qq = zeros(num_positions(x))
-    qq[configuration_range(x, findjoint(x.mechanism, "base_x"))]        .= 100
-    qq[configuration_range(x, findjoint(x.mechanism, "base_z"))]        .= 100
-    qq[configuration_range(x, findjoint(x.mechanism, "base_rotation"))] .= 10
-    qq[configuration_range(x, findjoint(x.mechanism, "core_to_rh_x"))]  .= 0.01
-    qq[configuration_range(x, findjoint(x.mechanism, "core_to_lh_x"))]  .= 0.01
-    qq[configuration_range(x, findjoint(x.mechanism, "core_to_rf_x"))]  .= 0.01
-    qq[configuration_range(x, findjoint(x.mechanism, "core_to_lf_x"))]  .= 0.01
-    qq[configuration_range(x, findjoint(x.mechanism, "core_to_rh_z"))]  .= 0.2
-    qq[configuration_range(x, findjoint(x.mechanism, "core_to_lh_z"))]  .= 0.2
-    qq[configuration_range(x, findjoint(x.mechanism, "core_to_rf_z"))]  .= 0.01
-    qq[configuration_range(x, findjoint(x.mechanism, "core_to_lf_z"))]  .= 0.01
+    qq[configuration_range(x, findjoint(x.mechanism, "base_x"))]        .= 0.1
+    qq[configuration_range(x, findjoint(x.mechanism, "base_z"))]        .= 10
+    qq[configuration_range(x, findjoint(x.mechanism, "base_rotation"))] .= 500
+    qq[configuration_range(x, findjoint(x.mechanism, "core_to_rh_extension"))]  .= 0.5
+    qq[configuration_range(x, findjoint(x.mechanism, "core_to_lh_extension"))]  .= 0.5
+    qq[configuration_range(x, findjoint(x.mechanism, "core_to_rh_rotation"))]  .= 0.5
+    qq[configuration_range(x, findjoint(x.mechanism, "core_to_lh_rotation"))]  .= 0.5
+    qq[configuration_range(x, findjoint(x.mechanism, "core_to_rf_extension"))]  .= 0.1
+    qq[configuration_range(x, findjoint(x.mechanism, "core_to_lf_extension"))]  .= 0.1
+    qq[configuration_range(x, findjoint(x.mechanism, "core_to_rf_rotation"))]  .= 0.01
+    qq[configuration_range(x, findjoint(x.mechanism, "core_to_lf_rotation"))]  .= 0.01
 
     qv = fill(1e-4, num_velocities(x))
     # qv[velocity_range(x, findjoint(x.mechanism, "base_x"))] .= 0.1
 
     Q = diagm(vcat(qq, qv))
     # # minimize (rx - lx)^2 = rx^2 - 2rxlx + lx^2
-    # rx = configuration_range(x, findjoint(x.mechanism, "core_to_rf_x"))
-    # lx = configuration_range(x, findjoint(x.mechanism, "core_to_lf_x"))
-    # w_centering = 10
-    # Q[rx, rx] += w_centering
-    # Q[lx, lx] += w_centering
-    # Q[lx, rx] -= w_centering
-    # Q[rx, lx] -= w_centering
+    rx = configuration_range(x, findjoint(x.mechanism, "core_to_rf_extension"))
+    lx = configuration_range(x, findjoint(x.mechanism, "core_to_lf_extension"))
+    w_centering = 10
+    Q[rx, rx] += w_centering
+    Q[lx, lx] += w_centering
+    Q[lx, rx] -= w_centering
+    Q[rx, lx] -= w_centering
+    rθ = configuration_range(x, findjoint(x.mechanism, "core_to_rf_rotation"))
+    lθ = configuration_range(x, findjoint(x.mechanism, "core_to_lf_rotation"))
+    w_centering = 10
+    Q[rθ, rθ] += w_centering
+    Q[lθ, lθ] += w_centering
+    Q[lθ, rθ] -= w_centering
+    Q[rθ, lθ] -= w_centering
 
     rr = fill(0.002, num_velocities(x))
-    rr[velocity_range(x, findjoint(x.mechanism, "core_to_rf_x"))] .= 0.01
-    rr[velocity_range(x, findjoint(x.mechanism, "core_to_lf_x"))] .= 0.01
-    rr[velocity_range(x, findjoint(x.mechanism, "core_to_rf_z"))] .= 0.01
-    rr[velocity_range(x, findjoint(x.mechanism, "core_to_lf_z"))] .= 0.01
+    rr[velocity_range(x, findjoint(x.mechanism, "core_to_rf_extension"))] .= 0.01
+    rr[velocity_range(x, findjoint(x.mechanism, "core_to_lf_extension"))] .= 0.01
+    rr[velocity_range(x, findjoint(x.mechanism, "core_to_rf_rotation"))] .= 0.01
+    rr[velocity_range(x, findjoint(x.mechanism, "core_to_lf_rotation"))] .= 0.01
     R = diagm(rr)
     Q, R
 end
@@ -175,8 +182,10 @@ function (c::MPCController)(x0::Union{MechanismState, LCPSim.StateRecord})
     set_velocity!(c.scratch_state, velocity(x0))
     env = Gurobi.Env()
     solver = GurobiSolver(env,
-                          OutputFlag=0,
+                          OutputFlag=1,
                           FeasibilityTol=1e-4,
+                          Presolve=2,
+                          PreSparsify=1,
                           MIPGap=c.params.gap,
                           TimeLimit=c.params.timelimit)
     results = run_mpc(c.boxval,

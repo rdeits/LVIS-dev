@@ -1,0 +1,191 @@
+<?xml version="1.0"?>
+
+<robot xmlns="http://drake.mit.edu"
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+ xsi:schemaLocation="http://drake.mit.edu ../../doc/drakeURDF.xsd" name="BoxValkyrie">
+  <link name="core">
+    <inertial>
+      <mass value="1.0"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="1.0" iyy="1.0" izz="1.0" ixy="0.0" ixz="0.0" iyz="0.0"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0.025"/>
+      <geometry>
+        <box size="0.4 0.05 0.55"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <link name="rh_dummy">
+    <inertial>
+      <mass value="0.0"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="0.0" iyy="0.0" izz="0.0" ixy="0.0" ixz="0.0" iyz="0.0"/>
+    </inertial>
+    <visual>
+      <geometry>
+        <sphere radius="0.025"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <link name="rh">
+    <inertial>
+      <mass value="0.05"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="1.0" iyy="1.0" izz="1.0" ixy="0.0" ixz="0.0" iyz="0.0"/>
+    </inertial>
+    <visual>
+      <geometry>
+        <sphere radius="0.05"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <joint name="core_to_rh_rotation" type="revolute">
+    <parent link="core"/>
+    <child link="rh_dummy"/>
+    <origin xyz="0.25 0 0.30"/>
+    <axis xyz="0 -1 0"/>
+    <limit lower="-1.5708" upper="0.1" velocity="10" effort="2"/>
+  </joint>
+
+  <joint name="core_to_rh_extension" type="prismatic">
+    <parent link="rh_dummy"/>
+    <child link="rh"/>
+    <origin xyz="0 0 0"/>
+    <axis xyz="1 0 0"/>
+    <limit lower="0.18" upper="0.75" velocity="10" effort="2"/>
+  </joint>
+
+  <link name="lh_dummy">
+    <inertial>
+      <mass value="0.0"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="0.0" iyy="0.0" izz="0.0" ixy="0.0" ixz="0.0" iyz="0.0"/>
+    </inertial>
+    <visual>
+      <geometry>
+        <sphere radius="0.025"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <link name="lh">
+    <inertial>
+      <mass value="0.05"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="1.0" iyy="1.0" izz="1.0" ixy="0.0" ixz="0.0" iyz="0.0"/>
+    </inertial>
+    <visual>
+      <geometry>
+        <sphere radius="0.05"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <joint name="core_to_lh_rotation" type="revolute">
+    <parent link="core"/>
+    <child link="lh_dummy"/>
+    <origin xyz="-0.25 0 0.30"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-1.5708" upper="0.1" velocity="10" effort="2"/>
+  </joint>
+
+  <joint name="core_to_lh_extension" type="prismatic">
+    <parent link="lh_dummy"/>
+    <child link="lh"/>
+    <origin xyz="0 0 0"/>
+    <axis xyz="-1 0 0"/>
+    <limit lower="0.18" upper="0.75" velocity="10" effort="2"/>
+  </joint>
+
+  <link name="rf_dummy">
+    <inertial>
+      <mass value="0.0"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="0.0" iyy="0.0" izz="0.0" ixy="0.0" ixz="0.0" iyz="0.0"/>
+    </inertial>
+    <visual>
+      <geometry>
+        <sphere radius="0.025"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <link name="rf">
+    <inertial>
+      <mass value="0.2"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="1.0" iyy="1.0" izz="1.0" ixy="0.0" ixz="0.0" iyz="0.0"/>
+    </inertial>
+    <visual>
+      <geometry>
+        <sphere radius="0.05"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <joint name="core_to_rf_rotation" type="revolute">
+    <parent link="core"/>
+    <child link="rf_dummy"/>
+    <origin xyz="0.20 0 -0.25"/>
+    <axis xyz="0 -1 0"/>
+    <limit lower="-0.05" upper="0.785398" velocity="10" effort="10"/>
+  </joint>
+
+  <joint name="core_to_rf_extension" type="prismatic">
+    <parent link="rf_dummy"/>
+    <child link="rf"/>
+    <origin xyz="0 0 0"/>
+    <axis xyz="0 0 -1"/>
+    <limit lower="0.4" upper="0.9" velocity="10" effort="20"/>
+  </joint>
+
+    <link name="lf_dummy">
+    <inertial>
+      <mass value="0.0"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="0.0" iyy="0.0" izz="0.0" ixy="0.0" ixz="0.0" iyz="0.0"/>
+    </inertial>
+    <visual>
+      <geometry>
+        <sphere radius="0.025"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <link name="lf">
+    <inertial>
+      <mass value="0.2"/>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <inertia ixx="1.0" iyy="1.0" izz="1.0" ixy="0.0" ixz="0.0" iyz="0.0"/>
+    </inertial>
+    <visual>
+      <geometry>
+        <sphere radius="0.05"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <joint name="core_to_lf_rotation" type="revolute">
+    <parent link="core"/>
+    <child link="lf_dummy"/>
+    <origin xyz="-0.20 0 -0.25"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-0.05" upper="0.785398" velocity="10" effort="10"/>
+  </joint>
+
+  <joint name="core_to_lf_extension" type="prismatic">
+    <parent link="lf_dummy"/>
+    <child link="lf"/>
+    <origin xyz="0 0 0"/>
+    <axis xyz="0 0 -1"/>
+    <limit lower="0.4" upper="0.9" velocity="10" effort="20"/>
+  </joint>
+
+
+</robot>
+
+
