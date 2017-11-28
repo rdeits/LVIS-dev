@@ -226,9 +226,8 @@ end
 
 joint_limit_cost(up::LCPSim.LCPUpdate) = sum([sum(jc.λ .^ 2) for jc in up.joint_contacts])
 
-function joint_limit_cost(results::AbstractVector{<:LCPSim.LCPUpdate})
-    return sum(joint_limit_cost, results)
-end
+joint_limit_cost(results::AbstractVector{<:LCPSim.LCPUpdate}) = 
+    sum(joint_limit_cost, results)
 
 function create_initial_state(model::Model, x0::MechanismState)
     @variable model q0[1:num_positions(x0)]
@@ -292,12 +291,6 @@ function run_mpc(boxval::BoxValkyrie,
     #                          x_nominal=x_nominal,
     #                          solver=solver)
     # return MPCResults{Float64}(results, nothing)
-
-    # TODO: NONE OF THE BELOW CODE IS EXECUTED ANYMORE. We should take the
-    # _run_optimization function and inline it here, replacing the existing
-    # optimization. Also, the `LQRSolution` argument doesn't really make sense
-    # now that we want to re-compute the LQR around the current pose.
-
 
     N = params.horizon
     Δt = params.Δt
