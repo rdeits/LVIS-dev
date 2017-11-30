@@ -46,21 +46,29 @@ function BoxValkyrie()
     floor = planar_obstacle(default_frame(world), [0, 0, 1.], [0, 0, 0.], 1.)
     wall = planar_obstacle(default_frame(world), [1., 0, 0], [-1.0, 0, 0], 1.)
 
-    contact_limbs = findbody.(mechanism, ["rh", "lh", "rf", "lf"])
-    hands = findbody.(mechanism, ["rh", "lh"])
-    feet = findbody.(mechanism, ["rf", "lf"])
+    # contact_limbs = findbody.(mechanism, ["rh", "lh", "rf", "lf"])
+    # hands = findbody.(mechanism, ["rh", "lh"])
+    # feet = findbody.(mechanism, ["rf", "lf"])
+    rf = findbody(mechanism, "rf")
+    lf = findbody(mechanism, "lf")
+    rh = findbody(mechanism, "rh")
+    lh = findbody(mechanism, "lh")
 
     env = Environment(
-        Dict(vcat(
-                [body => ContactEnvironment(
-                    [Point3D(default_frame(body), SVector(0., 0, 0))],
-                    [floor])
-                    for body in feet],
-                [body => ContactEnvironment(
-                    [Point3D(default_frame(body), SVector(0., 0, 0))],
-                    [wall])
-                    for body in [findbody(mechanism, "lh")]]
-                )));
+        Dict(
+             rf => ContactEnvironment(
+                [Point3D(default_frame(rf), SVector(0., 0, 0))],
+                [floor]),
+             lf => ContactEnvironment(
+                [Point3D(default_frame(lf), SVector(0., 0, 0))],
+                [floor, wall]),
+             rh => ContactEnvironment(
+                [Point3D(default_frame(rh), SVector(0., 0, 0))],
+                [floor]),
+             lh => ContactEnvironment(
+                [Point3D(default_frame(lh), SVector(0., 0, 0))],
+                [floor, wall]),
+             ))
 
     BoxValkyrie(mechanism, env)
 end
@@ -78,7 +86,7 @@ end
 
 function default_costs(x::MechanismState)
     qq = zeros(num_positions(x))
-    qq[configuration_range(x, findjoint(x.mechanism, "base_x"))]        .= 0.1
+    qq[configuration_range(x, findjoint(x.mechanism, "base_x"))]        .= 0
     qq[configuration_range(x, findjoint(x.mechanism, "base_z"))]        .= 10
     qq[configuration_range(x, findjoint(x.mechanism, "base_rotation"))] .= 500
     qq[configuration_range(x, findjoint(x.mechanism, "core_to_rh_extension"))]  .= 0.5

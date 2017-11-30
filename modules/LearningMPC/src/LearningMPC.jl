@@ -31,10 +31,33 @@ function playback(vis::Visualizer, results::AbstractVector{<:LCPUpdate}, Δt = 0
     end
 end
 
+@with_kw struct MIPResults
+    solvetime_s::Float64
+    objective_value::Float64
+    objective_bound::Float64
+end
+
+struct Sample{T}
+    state::Vector{T}
+    uJ::Matrix{T}
+    warmstart_costs::Vector{T}
+    mip::MIPResults
+end
+
+features(s::Sample) = (s.state, s.uJ)
+
 struct MPCResults{T}
     lcp_updates::Nullable{Vector{LCPSim.LCPUpdate{T, T, T}}}
     jacobian::Nullable{Matrix{T}}
+    warmstart_costs::Vector{T}
+    mip::MIPResults
 end
+
+Sample(x::Union{MechanismState, LCPSim.StateRecord}, r::MPCResults) =
+    Sample(state_vector(x), 
+           hcat(get(r.lcp_updates)[1].input, get(r.jacobian)), 
+           r.warmstart_costs,
+           r.mip)
 
 struct LQRSolution{T} <: Function
     Q::Matrix{T}
@@ -120,16 +143,14 @@ function run_warmstarts!(model::Model,
         set_velocity!(x0, v0)
         LCPSim.simulate(x0, controller, env, params.Δt, params.horizon, params.lcp_solver; relinearize=false)
     end
-    warmstarts = filter(x -> !isempty(x), warmstarts)
-    if !isempty(warmstarts)
-        idx = indmin(cost.(warmstarts))
+    warmstart_costs = [isempty(w) ? Inf : cost(w) for w in warmstarts]
+    idx = indmin(warmstart_costs)
+    if isfinite(warmstart_costs[idx])
         best_warmstart = warmstarts[idx]
         setvalue.(results[1:length(best_warmstart)], best_warmstart)
         ConditionalJuMP.warmstart!(model, false)
-        return true
-    else
-        return false
     end
+    return warmstart_costs
 end
 
 function add_diagonal_cost!(model::Model, coeff=1e-6)
@@ -145,13 +166,18 @@ function run_mpc(x0::MechanismState,
                  params::MPCParams,
                  lqr::LQRSolution,
                  warmstart_controllers::AbstractVector{<:Function}=[])
+    # base_x = findjoint(x0.mechanism, "base_x")
+    # set_configuration!(x0, 
+    #                    base_x, 
+    #                    lqr.x0[configuration_range(x0, base_x)])
+
     model = Model(solver=params.mip_solver)
     x0_var = create_initial_state(model, x0)
     cost = results -> (lqr_cost(results, lqr) + joint_limit_cost(results))
     _, results_opt = LCPSim.optimize(x0_var, env, params.Δt, params.horizon, model)
     @objective model Min cost(results_opt)
 
-    run_warmstarts!(model, results_opt, x0, env, params, cost, warmstart_controllers)
+    warmstart_costs = run_warmstarts!(model, results_opt, x0, env, params, cost, warmstart_controllers)
     for c in model.linconstr
         if getvalue(c.terms) < c.lb - 1e-1 || getvalue(c.terms) > c.ub + 1e-1
             @show c.terms getvalue(c.terms) c.lb c.ub
@@ -159,10 +185,15 @@ function run_mpc(x0::MechanismState,
     end
     ConditionalJuMP.handle_constant_objective!(model)
     status = solve(model, suppress_warnings=true)
+    mip_results = MIPResults(
+        solvetime_s = getsolvetime(model),
+        objective_value = getvalue(getobjective(model)),
+        objective_bound = getobjbound(model),
+        )
     @show status
 
     if any(isnan, JuMP.getvalue(results_opt[1].input))
-        return MPCResults{Float64}(nothing, nothing)
+        return MPCResults{Float64}(nothing, nothing, warmstart_costs, mip_results)
     end
 
     # Now fix the binary variables and re-solve to get updated duals
@@ -172,19 +203,19 @@ function run_mpc(x0::MechanismState,
     add_diagonal_cost!(model)
     status = solve(model, suppress_warnings=true)
     if status != :Optimal
-        return MPCResults{Float64}(getvalue.(results_opt), nothing)
+        return MPCResults{Float64}(getvalue.(results_opt), nothing, warmstart_costs, mip_results)
     end
     exsol = try
         ExplicitQPs.explicit_solution(model, state_vector(x0_var))
     catch e
         if isa(e, Base.LinAlg.SingularException)
-            return MPCResults{Float64}(getvalue.(results_opt), nothing)
+            return MPCResults{Float64}(getvalue.(results_opt), nothing, warmstart_costs, mip_results)
         else
             rethrow(e)
         end
     end
     J = ExplicitQPs.jacobian(exsol, results_opt[1].input)
-    return MPCResults{Float64}(getvalue.(results_opt), J)
+    return MPCResults{Float64}(getvalue.(results_opt), J, warmstart_costs, mip_results)
 end
 
 mutable struct MPCController{T, P <: MPCParams, M <: MechanismState}
