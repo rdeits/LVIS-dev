@@ -3,7 +3,7 @@ __precompile__()
 module LearningMPC
 
 using LCPSim
-using LCPSim: LCPUpdate, contact_force 
+using LCPSim: LCPUpdate, contact_force
 using DrakeVisualizer: PolyLine, Visualizer, ArrowHead, settransform!, setgeometry!
 using RigidBodyDynamics
 using Parameters: @with_kw
@@ -54,8 +54,8 @@ struct MPCResults{T}
 end
 
 Sample(x::Union{MechanismState, LCPSim.StateRecord}, r::MPCResults) =
-    Sample(state_vector(x), 
-           hcat(get(r.lcp_updates)[1].input, get(r.jacobian)), 
+    Sample(state_vector(x),
+           hcat(get(r.lcp_updates)[1].input, get(r.jacobian)),
            r.warmstart_costs,
            r.mip)
 
@@ -74,7 +74,7 @@ function LQRSolution(x0::MechanismState{T}, Q, R, contacts::AbstractVector{<:Poi
     v0 = copy(velocity(x0))
     velocity(x0) .= 0
     RigidBodyDynamics.setdirty!(x0)
-    K, S = LCPSim.ContactLQR.contact_dlqr(x0, u0, Q, R, contacts, Δt)
+    K, S = LCPSim.ContactLQR.contact_dlqr(x0, u0, Q, R, Δt, contacts)
     set_velocity!(x0, v0)
     LQRSolution{T}(Q, R, K, S, copy(state_vector(x0)), copy(u0), Δt)
 end
@@ -118,7 +118,7 @@ end
 
 joint_limit_cost(up::LCPSim.LCPUpdate) = sum([sum(jc.λ .^ 2) for jc in up.joint_contacts])
 
-joint_limit_cost(results::AbstractVector{<:LCPSim.LCPUpdate}) = 
+joint_limit_cost(results::AbstractVector{<:LCPSim.LCPUpdate}) =
     sum(joint_limit_cost, results)
 
 function create_initial_state(model::Model, x0::MechanismState)
@@ -167,8 +167,8 @@ function run_mpc(x0::MechanismState,
                  lqr::LQRSolution,
                  warmstart_controllers::AbstractVector{<:Function}=[])
     # base_x = findjoint(x0.mechanism, "base_x")
-    # set_configuration!(x0, 
-    #                    base_x, 
+    # set_configuration!(x0,
+    #                    base_x,
     #                    lqr.x0[configuration_range(x0, base_x)])
 
     model = Model(solver=params.mip_solver)
