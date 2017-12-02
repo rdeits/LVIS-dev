@@ -86,7 +86,7 @@ function default_costs(x::MechanismState)
     qq = zeros(num_positions(x))
     qq[configuration_range(x, findjoint(x.mechanism, "base_x"))]        .= 0
     qq[configuration_range(x, findjoint(x.mechanism, "base_z"))]        .= 10
-    qq[configuration_range(x, findjoint(x.mechanism, "base_rotation"))] .= 50
+    qq[configuration_range(x, findjoint(x.mechanism, "base_rotation"))] .= 500
     qq[configuration_range(x, findjoint(x.mechanism, "core_to_rh_extension"))]  .= 0.5
     qq[configuration_range(x, findjoint(x.mechanism, "core_to_lh_extension"))]  .= 0.5
     qq[configuration_range(x, findjoint(x.mechanism, "core_to_rh_rotation"))]  .= 0.5
@@ -97,20 +97,22 @@ function default_costs(x::MechanismState)
     qq[configuration_range(x, findjoint(x.mechanism, "core_to_lf_rotation"))]  .= 0.1
 
     qv = fill(1e-3, num_velocities(x))
-    # qv[velocity_range(x, findjoint(x.mechanism, "base_x"))] .= 0.1
+    qv[velocity_range(x, findjoint(x.mechanism, "base_x"))] .= 10
+    qv[velocity_range(x, findjoint(x.mechanism, "base_z"))] .= 1
+    qv[velocity_range(x, findjoint(x.mechanism, "base_rotation"))] .= 20
 
     Q = diagm(vcat(qq, qv))
-    # # minimize (rx - lx)^2 = rx^2 - 2rxlx + lx^2
+    # minimize (rx - lx)^2 = rx^2 - 2rxlx + lx^2
     rx = configuration_range(x, findjoint(x.mechanism, "core_to_rf_extension"))
     lx = configuration_range(x, findjoint(x.mechanism, "core_to_lf_extension"))
-    w_centering = 10
+    w_centering = 1
     Q[rx, rx] += w_centering
     Q[lx, lx] += w_centering
     Q[lx, rx] -= w_centering
     Q[rx, lx] -= w_centering
     rθ = configuration_range(x, findjoint(x.mechanism, "core_to_rf_rotation"))
     lθ = configuration_range(x, findjoint(x.mechanism, "core_to_lf_rotation"))
-    w_centering = 10
+    w_centering = 1
     Q[rθ, rθ] += w_centering
     Q[lθ, lθ] += w_centering
     Q[lθ, rθ] -= w_centering
