@@ -43,8 +43,9 @@ function BoxValkyrie()
     world = root_body(mechanism)
 
 
-    floor = planar_obstacle(default_frame(world), [0, 0, 1.], [0, 0, 0.], 1.)
-    wall = planar_obstacle(default_frame(world), [1., 0, 0], [-1.0, 0, 0], 1.)
+    # http://nvlpubs.nist.gov/nistpubs/jres/28/jresv28n4p439_A1b.pdf
+    floor = planar_obstacle(default_frame(world), [0, 0, 1.], [0, 0, 0.], 2.0)
+    wall = planar_obstacle(default_frame(world), [1., 0, 0], [-1.0, 0, 0], 0.5)
 
     # contact_limbs = findbody.(mechanism, ["rh", "lh", "rf", "lf"])
     # hands = findbody.(mechanism, ["rh", "lh"])
@@ -62,12 +63,9 @@ function BoxValkyrie()
              lf => ContactEnvironment(
                 [Point3D(default_frame(lf), SVector(0., 0, 0))],
                 [floor, wall]),
-             rh => ContactEnvironment(
-                [Point3D(default_frame(rh), SVector(0., 0, 0))],
-                [floor]),
              lh => ContactEnvironment(
                 [Point3D(default_frame(lh), SVector(0., 0, 0))],
-                [floor, wall]),
+                [wall]),
              ))
 
     BoxValkyrie(mechanism, env)
@@ -88,17 +86,17 @@ function default_costs(x::MechanismState)
     qq = zeros(num_positions(x))
     qq[configuration_range(x, findjoint(x.mechanism, "base_x"))]        .= 0
     qq[configuration_range(x, findjoint(x.mechanism, "base_z"))]        .= 10
-    qq[configuration_range(x, findjoint(x.mechanism, "base_rotation"))] .= 500
+    qq[configuration_range(x, findjoint(x.mechanism, "base_rotation"))] .= 50
     qq[configuration_range(x, findjoint(x.mechanism, "core_to_rh_extension"))]  .= 0.5
     qq[configuration_range(x, findjoint(x.mechanism, "core_to_lh_extension"))]  .= 0.5
     qq[configuration_range(x, findjoint(x.mechanism, "core_to_rh_rotation"))]  .= 0.5
     qq[configuration_range(x, findjoint(x.mechanism, "core_to_lh_rotation"))]  .= 0.5
     qq[configuration_range(x, findjoint(x.mechanism, "core_to_rf_extension"))]  .= 0.1
     qq[configuration_range(x, findjoint(x.mechanism, "core_to_lf_extension"))]  .= 0.1
-    qq[configuration_range(x, findjoint(x.mechanism, "core_to_rf_rotation"))]  .= 0.01
-    qq[configuration_range(x, findjoint(x.mechanism, "core_to_lf_rotation"))]  .= 0.01
+    qq[configuration_range(x, findjoint(x.mechanism, "core_to_rf_rotation"))]  .= 0.1
+    qq[configuration_range(x, findjoint(x.mechanism, "core_to_lf_rotation"))]  .= 0.1
 
-    qv = fill(1e-4, num_velocities(x))
+    qv = fill(1e-3, num_velocities(x))
     # qv[velocity_range(x, findjoint(x.mechanism, "base_x"))] .= 0.1
 
     Q = diagm(vcat(qq, qv))
@@ -119,10 +117,10 @@ function default_costs(x::MechanismState)
     Q[rθ, lθ] -= w_centering
 
     rr = fill(0.002, num_velocities(x))
-    rr[velocity_range(x, findjoint(x.mechanism, "core_to_rf_extension"))] .= 0.01
-    rr[velocity_range(x, findjoint(x.mechanism, "core_to_lf_extension"))] .= 0.01
-    rr[velocity_range(x, findjoint(x.mechanism, "core_to_rf_rotation"))] .= 0.01
-    rr[velocity_range(x, findjoint(x.mechanism, "core_to_lf_rotation"))] .= 0.01
+    # rr[velocity_range(x, findjoint(x.mechanism, "core_to_rf_extension"))] .= 0.01
+    # rr[velocity_range(x, findjoint(x.mechanism, "core_to_lf_extension"))] .= 0.01
+    # rr[velocity_range(x, findjoint(x.mechanism, "core_to_rf_rotation"))] .= 0.01
+    # rr[velocity_range(x, findjoint(x.mechanism, "core_to_lf_rotation"))] .= 0.01
     R = diagm(rr)
     Q, R
 end
