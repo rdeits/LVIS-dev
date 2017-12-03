@@ -204,10 +204,16 @@ function run_mpc(x0::MechanismState,
     @assert sum(model.colCat .== :Bin) == 0 "Model should no longer have any binary variables"
 
     add_diagonal_cost!(model)
-    status = solve(model, suppress_warnings=true)
-    if status != :Optimal
+    try
+        status = solve(model, suppress_warnings=true)
+        if status != :Optimal
+            return MPCResults{Float64}(getvalue.(results_opt), nothing, warmstart_costs, mip_results)
+        end
+    catch e
+        println("captured: $e")
         return MPCResults{Float64}(getvalue.(results_opt), nothing, warmstart_costs, mip_results)
     end
+
     exsol = try
         ExplicitQPs.explicit_solution(model, state_vector(x0_var))
     catch e
