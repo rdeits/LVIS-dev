@@ -3,7 +3,7 @@ __precompile__()
 module LearningMPC
 
 using LCPSim
-using LCPSim: LCPUpdate, contact_force
+using LCPSim: LCPUpdate, contact_force, _getvalue
 using DrakeVisualizer: PolyLine, Visualizer, ArrowHead, settransform!, setgeometry!
 using RigidBodyDynamics
 using Parameters: @with_kw
@@ -178,21 +178,24 @@ function run_mpc(x0::MechanismState,
     @objective model Min cost(results_opt)
 
     warmstart_costs = run_warmstarts!(model, results_opt, x0, env, params, cost, warmstart_controllers)
-    for c in model.linconstr
-        if getvalue(c.terms) < c.lb - 1e-1 || getvalue(c.terms) > c.ub + 1e-1
-            @show c.terms getvalue(c.terms) c.lb c.ub
-        end
-    end
+    println("warmstart_costs = $warmstart_costs")
+    flush(STDOUT)
     ConditionalJuMP.handle_constant_objective!(model)
-    status = solve(model, suppress_warnings=true)
+    try
+        status = solve(model, suppress_warnings=true)
+        @show status
+    catch e
+        println("captured: $e")
+        return MPCResults{Float64}(nothing, nothing, warmstart_costs, mip_results)
+    end
+
     mip_results = MIPResults(
         solvetime_s = getsolvetime(model),
-        objective_value = getvalue(getobjective(model)),
+        objective_value = _getvalue(getobjective(model)),
         objective_bound = getobjbound(model),
         )
-    @show status
 
-    if any(isnan, JuMP.getvalue(results_opt[1].input))
+    if any(isnan, _getvalue.(results_opt[1].input))
         return MPCResults{Float64}(nothing, nothing, warmstart_costs, mip_results)
     end
 
