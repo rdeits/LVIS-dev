@@ -54,7 +54,7 @@ struct LQRSolution{T} <: Function
     Δt::T
 end
 
-function LQRSolution(x0::MechanismState{T}, Q, R, contacts::AbstractVector{<:Point3D}, Δt) where T
+function LQRSolution(x0::MechanismState{T}, Q, R, Δt, contacts::AbstractVector{<:Point3D}=Point3D[]) where T
     u0 = nominal_input(x0, contacts)
     v0 = copy(velocity(x0))
     velocity(x0) .= 0

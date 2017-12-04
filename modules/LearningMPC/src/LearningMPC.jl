@@ -20,5 +20,6 @@ const StateLike = Union{MechanismState, LCPSim.StateRecord}
 
 include("mpc.jl")
 include("learning.jl")
+include("onlinempc.jl")
 
 end
