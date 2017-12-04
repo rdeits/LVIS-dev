@@ -1,3 +1,18 @@
 [submodule "py-mpc"]
 	path = py-mpc
 	url = git@github.com:rdeits/py-mpc
+[submodule "submodules/QHull"]
+	path = submodules/QHull
+	url = git@github.com:JuliaPolyhedra/QHull.jl
+[submodule "submodules/StochasticOptimization"]
+	path = submodules/StochasticOptimization
+	url = git@github.com:JuliaML/StochasticOptimization.jl
+[submodule "submodules/AxisArrayVariables"]
+	path = submodules/AxisArrayVariables
+	url = git@github.com:rdeits/AxisArrayVariables.jl
+[submodule "submodules/ExplicitQPs"]
+	path = submodules/ExplicitQPs
+	url = git@github.com:rdeits/ExplicitQPs.jl
+[submodule "submodules/LCPSim"]
+	path = submodules/LCPSim
+	url = git@github.com:rdeits/LCPSim.jl
