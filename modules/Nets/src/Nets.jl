@@ -145,7 +145,7 @@ function predict_sensitivity(net::Net, x::AbstractVector)
 end
 
 
-include("Explicit.jl")
+include("explicit.jl")
 include("optimization.jl")
 include("scaling.jl")
 
