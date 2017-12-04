@@ -16,3 +16,6 @@
 [submodule "submodules/LCPSim"]
 	path = submodules/LCPSim
 	url = git@github.com:rdeits/LCPSim.jl
+[submodule "submodules/RoguePkg"]
+	path = submodules/RoguePkg
+	url = git@github.com:tpapp/RoguePkg.jl.git
