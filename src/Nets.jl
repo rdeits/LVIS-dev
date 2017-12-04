@@ -50,7 +50,7 @@ nbiases(shapes::AbstractVector{<:NTuple{2, Integer}}) = sum(first, shapes)
 nparams(shapes::AbstractVector{<:NTuple{2, Integer}}) = nweights(shapes) + nbiases(shapes)
 
 Base.zeros(::Type{Params{T}}, widths::AbstractVector{<:Integer}) where {T} =
-    Params(widths, zeros(T, nparams(widths))) 
+    Params(widths, zeros(T, nparams(widths)))
 Base.rand(::Type{Params{T}}, widths::AbstractVector{<:Integer}) where {T} =
     Params(widths, rand(T, nparams(widths)))
 Base.randn(::Type{Params{T}}, widths::AbstractVector{<:Integer}) where {T} =
@@ -63,7 +63,7 @@ struct Net{P <: Params, F, T <: AffineMap} <: Function
     output_tform::T
 end
 
-Net(params::Params, activation=leaky_relu) = 
+Net(params::Params, activation=leaky_relu) =
     Net(params,
         activation,
         AffineMap(UniformScaling(1.0), zeros(ninputs(params))),
@@ -82,6 +82,7 @@ Base.randn(net::Net) = randn(nparams(net))
 
 Base.similar(net::Net, data::AbstractVector) =
     Net(Params(shapes(params(net)), data),
+        net.activation,
         net.input_tform,
         net.output_tform)
 
