@@ -172,7 +172,7 @@ function run_mpc(x0::MechanismState,
     warmstart_costs = run_warmstarts!(model, results_opt, x0, env, params, cost, warmstart_controllers)
     ConditionalJuMP.handle_constant_objective!(model)
     try
-        status = solve(model, suppress_warnings=true)
+        solve(model, suppress_warnings=true)
     catch e
         println("captured: $e")
         return MPCResults{Float64}(nothing, nothing, warmstart_costs, mip_results)
@@ -184,7 +184,9 @@ function run_mpc(x0::MechanismState,
         objective_bound = getobjbound(model),
         )
 
-    if any(isnan, _getvalue.(results_opt[1].input))
+    results_opt_value = getvalue.(results_opt)
+
+    if any(isnan, results_opt_value[1].input)
         return MPCResults{Float64}(nothing, nothing, warmstart_costs, mip_results)
     end
 
@@ -196,24 +198,24 @@ function run_mpc(x0::MechanismState,
     try
         status = solve(model, suppress_warnings=true)
         if status != :Optimal
-            return MPCResults{Float64}(getvalue.(results_opt), nothing, warmstart_costs, mip_results)
+            return MPCResults{Float64}(results_opt_value, nothing, warmstart_costs, mip_results)
         end
     catch e
         println("captured: $e")
-        return MPCResults{Float64}(getvalue.(results_opt), nothing, warmstart_costs, mip_results)
+        return MPCResults{Float64}(results_opt_value, nothing, warmstart_costs, mip_results)
     end
 
     exsol = try
         ExplicitQPs.explicit_solution(model, state_vector(x0_var))
     catch e
         if isa(e, Base.LinAlg.SingularException)
-            return MPCResults{Float64}(getvalue.(results_opt), nothing, warmstart_costs, mip_results)
+            return MPCResults{Float64}(results_opt_value, nothing, warmstart_costs, mip_results)
         else
             rethrow(e)
         end
     end
     J = ExplicitQPs.jacobian(exsol, results_opt[1].input)
-    return MPCResults{Float64}(getvalue.(results_opt), J, warmstart_costs, mip_results)
+    return MPCResults{Float64}(results_opt_value, J, warmstart_costs, mip_results)
 end
 
 mutable struct MPCController{T, P <: MPCParams, M <: MechanismState}
