@@ -35,28 +35,33 @@ end
     batch_size::Int = 1
 end
 
-function adam_updater(net::Net{<:Params{T}}) where T
-    updater = StochasticOptimization.Adam(T)
-    StochasticOptimization.init(updater, net.params.data)
-    updater
+struct AdamOptimizer{T, Tape <: ReverseDiff.CompiledTape}
+    opts::AdamOpts
+    updater::StochasticOptimization.Adam{T}
+    ∇::Vector{T}
+    loss_tape::Tape
+    gradient_result::Tuple{Vector{T}, Vector{T}, Matrix{T}}
 end
 
-function adam_update!(params::AbstractVector, updater::StochasticOptimization.Adam,
-                      loss::Function, data::AbstractVector{<:Tuple},
-                      opts::AdamOpts=AdamOpts())
-    ∇ = zeros(params)
-    sample_weight = 1 / opts.batch_size
-    x0, y0 = data[1]
+function AdamOptimizer(loss::Function, opts::AdamOpts, net::Net{<:Params{T}}, x0, y0) where T
+    updater = StochasticOptimization.Adam(T)
+    StochasticOptimization.init(updater, net.params.data)
+    ∇ = zeros(net.params.data)
     loss_tape = ReverseDiff.compile(ReverseDiff.GradientTape(loss,
-        (params, x0, y0)))
-    gradient_result = (similar(params), zeros(x0), zeros(y0))
-    for batch in batchview(shuffleobs(data), opts.batch_size)
-        ∇ .= 0
+        (net.params.data, x0, y0)))
+    gradient_result = (similar(net.params.data), zeros(x0), zeros(y0))
+    AdamOptimizer{T, typeof(loss_tape)}(opts, updater, ∇, loss_tape, gradient_result)
+end
+
+function update!(params::AbstractVector, adam::AdamOptimizer, data::AbstractVector{<:Tuple})
+    sample_weight = 1 / adam.opts.batch_size
+    for batch in batchview(shuffleobs(data), adam.opts.batch_size)
+        adam.∇ .= 0
         for (x, y) in batch
-            ReverseDiff.gradient!(gradient_result, loss_tape, (params, x, y))
-            ∇ .+= sample_weight .* gradient_result[1]
+            ReverseDiff.gradient!(adam.gradient_result, adam.loss_tape, (params, x, y))
+            adam.∇ .+= sample_weight .* adam.gradient_result[1]
         end
-        StochasticOptimization.update!(params, updater, ∇, opts.learning_rate)
+        StochasticOptimization.update!(params, adam.updater, adam.∇, adam.opts.learning_rate)
     end
     params
 end
