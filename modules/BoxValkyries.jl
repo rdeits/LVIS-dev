@@ -36,7 +36,7 @@ function DrakeVisualizer.setgeometry!(basevis::Visualizer, boxval::BoxValkyrie)
     end
 end
 
-function BoxValkyrie()
+function BoxValkyrie(include_wall=true)
     urdf_mech = parse_urdf(Float64, urdf)
     mechanism, base = planar_revolute_base()
     attach!(mechanism, base, urdf_mech)
@@ -55,18 +55,30 @@ function BoxValkyrie()
     rh = findbody(mechanism, "rh")
     lh = findbody(mechanism, "lh")
 
-    env = Environment(
-        Dict(
-             rf => ContactEnvironment(
-                [Point3D(default_frame(rf), SVector(0., 0, 0))],
-                [floor]),
-             lf => ContactEnvironment(
-                [Point3D(default_frame(lf), SVector(0., 0, 0))],
-                [floor, wall]),
-             lh => ContactEnvironment(
-                [Point3D(default_frame(lh), SVector(0., 0, 0))],
-                [wall]),
-             ))
+    if include_wall
+        env = Environment(
+            Dict(
+                 rf => ContactEnvironment(
+                    [Point3D(default_frame(rf), SVector(0., 0, 0))],
+                    [floor]),
+                 lf => ContactEnvironment(
+                    [Point3D(default_frame(lf), SVector(0., 0, 0))],
+                    [floor, wall]),
+                 lh => ContactEnvironment(
+                    [Point3D(default_frame(lh), SVector(0., 0, 0))],
+                    [wall]),
+                 ))
+    else
+        env = Environment(
+            Dict(
+                 rf => ContactEnvironment(
+                    [Point3D(default_frame(rf), SVector(0., 0, 0))],
+                    [floor]),
+                 lf => ContactEnvironment(
+                    [Point3D(default_frame(lf), SVector(0., 0, 0))],
+                    [floor]),
+                 ))
+    end
 
     BoxValkyrie(mechanism, env)
 end

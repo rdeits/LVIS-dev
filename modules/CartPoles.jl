@@ -8,13 +8,6 @@ using RigidBodyTreeInspector
 using LCPSim
 using Polyhedra
 using CDDLib
-using StaticArrays: SVector
-using Gurobi
-using JuMP
-using LearningMPC
-using ExplicitQPs
-using Parameters
-using ConditionalJuMP
 
 urdf = joinpath(@__DIR__, "cartpole.urdf")
 
@@ -48,7 +41,7 @@ function CartPole(walls=true)
         pole = findbody(mechanism, "pole")
         env = Environment(
             Dict(pole => ContactEnvironment(
-                    [Point3D(default_frame(pole), SVector(0., 0, 1))],
+                    [Point3D(default_frame(pole), 0., 0., 1.)],
                     walls)))
     else
         env = Environment{Float64}(Dict())
@@ -65,14 +58,5 @@ function default_costs(c::CartPole)
     R = diagm([0.1, 0.1])
     Q, R
 end
-
-# @with_kw struct CartPoleMPCParams{T}
-#     Q::Matrix{T} = diagm([10., 100, 1, 10])
-#     R::Matrix{T} = diagm([0.1, 0.1])
-#     Δt::T = 0.01
-#     gap = 1e-3
-#     timelimit = 60
-#     horizon = 30
-# end
 
 end
