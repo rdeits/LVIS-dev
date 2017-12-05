@@ -1,8 +1,11 @@
 function sensitive_loss(net, λ)
     nx = length(net.input_tform.v)
+    nu = length(net.output_tform.v)
     q = fill(λ, 1, 1 + nx)
     q[1] = 1 - λ
     function loss(params, x, y)
+        @assert size(x) == (nx,)
+        @assert size(y) == (nu, 1 + nx)
         sum(abs2,
             q .* (Nets.predict_sensitivity(similar(net, params), x) .- y)
             )
@@ -16,7 +19,7 @@ function control_net(mechanism::Mechanism, hidden_widths::Vector, activation::Fu
     widths = [nx, hidden_widths..., nu]
     x_to_u = AffineMap(eye(nx), zeros(nx))
     v_to_y = AffineMap(diagm([max(abs(b.lower), abs(b.upper)) for b in LCPSim.all_effort_bounds(mechanism)]),
-                       zeros(num_velocities(mechanism)))
+                       zeros(nu))
     params = 0.1 * randn(Nets.Params{Float64}, widths).data
     Nets.Net(Nets.Params(widths, params), activation, x_to_u, v_to_y)
 end
@@ -94,9 +97,10 @@ end
 function dagger_controller(mpc_controller, net_controller, p_mpc)
     x ->  begin
         if rand() < p_mpc
-            mpc_controller(x)
+            return mpc_controller(x)
+        else
+            return net_controller(x)
         end
-        return net_controller(x)
     end
 end
 

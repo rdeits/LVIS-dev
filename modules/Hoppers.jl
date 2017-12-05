@@ -35,8 +35,8 @@ end
 
 function nominal_state(c::Hopper)
     x = MechanismState{Float64}(c.mechanism)
-    set_configuration!(x, findjoint(c.mechanism, "base_z"), [3.0])
-    set_configuration!(x, findjoint(c.mechanism, "foot_extension"), [1.0])
+    set_configuration!(x, findjoint(c.mechanism, "base_z"), [2.0])
+    set_configuration!(x, findjoint(c.mechanism, "foot_extension"), [0.75])
     x
 end
 
