@@ -1,3 +1,24 @@
+function cost_function(features::Function, net::Net, training_data, w_sensitivity)
+    q::Matrix{Float64} = fill(w_sensitivity, 1, 1 + length(net.input_tform.v))
+    q[1] = 1 - w_sensitivity
+
+    f = (params) -> begin
+        n = similar(net, params)
+        mean(training_data) do sample
+            x, yJ = features(sample)
+            sum(abs2, q .* (Nets.predict_sensitivity(n, x) .- yJ))
+        end
+    end
+
+    loss_tape = ReverseDiff.compile(ReverseDiff.GradientTape(f, (net.params.data,)))
+
+    g! = (∇, params) -> ReverseDiff.gradient!((∇,), loss_tape, (params,))
+    f, g!
+end
+
+cost_function(net::Net, args...) = cost_function(identity, net, args...)
+
+
 @with_kw type SGDOpts
     learning_rate::Float64 = 0.01
     momentum::Float64 = 0.0
