@@ -28,14 +28,15 @@ abstract type MPCSink <: Function end
 
 struct MPCSampleSink{T} <: MPCSink
     samples::Vector{Sample{T}}
+    keep_nulls::Bool
 
-    MPCSampleSink{T}() where {T} = new{T}([])
+    MPCSampleSink{T}(keep_nulls=false) where {T} = new{T}([], keep_nulls)
 end
 
 Base.empty!(s::MPCSampleSink) = empty!(s.samples)
 
 function (s::MPCSampleSink)(x::StateLike, results::MPCResults)
-    if !isnull(results.lcp_updates) && !isnull(results.jacobian)
+    if s.keep_nulls || (!isnull(results.lcp_updates) && !isnull(results.jacobian))
         push!(s.samples, LearningMPC.Sample(x, results))
     end
 end

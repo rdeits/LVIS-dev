@@ -38,11 +38,19 @@ struct MPCResults{T}
     mip::MIPResults
 end
 
-Sample(x::Union{MechanismState, LCPSim.StateRecord}, r::MPCResults) =
-    Sample(state_vector(x),
-           hcat(get(r.lcp_updates)[1].input, get(r.jacobian)),
-           r.warmstart_costs,
-           r.mip)
+function Sample(x::Union{MechanismState, LCPSim.StateRecord}, r::MPCResults)
+    if isnull(r.lcp_updates)
+        u = fill(NaN, num_velocities(x))
+    else
+        u = get(r.lcp_updates)[1].input
+    end
+    if isnull(r.jacobian)
+        J = fill(NaN, num_velocities(x), length(state_vector(x)))
+    else
+        J = get(r.jacobian)
+    end
+    Sample(state_vector(x), hcat(u, J), r.warmstart_costs, r.mip)
+end
 
 struct LQRSolution{T} <: Function
     Q::Matrix{T}

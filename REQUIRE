@@ -33,3 +33,6 @@ RigidBodyTreeInspector
 StaticArrays 0.6.0
 LearningStrategies
 Optim 0.10.1 0.11
+DataFrames
+CSV
+Query
