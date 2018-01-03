@@ -2,7 +2,6 @@ module Explicit
 
 using Polyhedra
 using CDDLib
-using DiffBase
 using ForwardDiff
 using Nets: Params, ninputs
 
