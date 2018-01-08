@@ -19,6 +19,10 @@ with_params(a::Affine, A, b) = Affine(A, b)
 
 (a::Affine)(x) = a.A * x .+ a.b
 
+function (a::Affine)(x)
+    [@view(a.A[i, :])' * x + a.b[i] for i in 1:size(a.A, 1)]
+end
+
 struct Chain{L <: Tuple}
     layers::L
 end
@@ -35,11 +39,6 @@ _chain_call(x, layer, layers...) = _chain_call(layer(x), layers...)
 _chain_call(x) = x
 
 with_params(c::Chain, params...) = Chain(_with_params(c.layers, params)...)
-
-# function _with_params(layers::Tuple{Any}, parameters::Tuple{})
-# 	@assert length(params(first(layers))) == 0
-# 	layers
-# end
 
 function _with_params(layers, parameters)
     layer = first(layers)
