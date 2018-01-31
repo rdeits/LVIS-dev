@@ -1,0 +1,1 @@
+Re-doing the grid search from 2017-12-20 because the previous grid steps missed the upper bound on leg extension (the grid only went up to 0.85, but the leg can extend to 1.0), so it missed a lot of interesting data. 
