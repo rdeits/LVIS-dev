@@ -13,9 +13,9 @@ plain(t::Transformation) = t
 plain(f::Function) = f
 plain(chain::Chain) = reduce(∘, identity, plain.(reverse(chain.layers)))
 
-struct TangentPropagator{F <: Function, C <: Chain}
+struct TangentPropagator{F <: Function, C}
     f::F
-    chain::C
+    layer::C
 end
 
 function TangentPropagator(chain::Chain)
@@ -25,7 +25,7 @@ end
 
 (p::TangentPropagator)(x) = p.f(x)
 
-Flux.params(p::TangentPropagator) = Flux.params(p.chain)
+Flux.params(p::TangentPropagator) = Flux.params(p.layer)
 
 function _propagate_tangent(f)
     (xJ) -> begin
@@ -41,6 +41,30 @@ function _propagate_tangent(f::Dense)
         (f(x), gσ .* f.W * J)
     end
 end
+
+struct Attention{T1, T2}
+    signals::T1
+    weights::T2
+end
+
+function (a::Attention)(x)
+    sum(a.weights(x) .* a.signals(x), 1)
+end
+
+Flux.params(a::Attention) = vcat(params(a.signals), params(a.weights))
+
+function TangentPropagator(a::Attention)
+    t1 = TangentPropagator(a.signals)
+    t2 = TangentPropagator(a.weights)
+    function f(x)
+        x1, J1 = t1(x)
+        x2, J2 = t2(x)
+        sum(x1 .* x2), sum(x1 .* J2, 1) .+ sum(x2 .* J1, 1)
+    end
+    TangentPropagator(f, a)
+end
+
+TangentPropagator(d::Dense) = TangentPropagator(Chain(d))
 
 module FluxExtensionsTests
     using FluxExtensions
