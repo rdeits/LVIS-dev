@@ -47,8 +47,19 @@ struct Attention{T1, T2}
     weights::T2
 end
 
+function avoid_zero(x, tol=1e-6)
+    if abs(x) < tol
+        if x < 0
+            return x + (-tol - x)
+        else
+            return x + (tol - x)
+        end
+    end
+    return x
+end
+
 function (a::Attention)(x)
-    sum(a.weights(x) .* a.signals(x), 1)
+    sum(a.weights(x) .* avoid_zero.(a.signals(x)), 1)
 end
 
 Flux.params(a::Attention) = vcat(params(a.signals), params(a.weights))
