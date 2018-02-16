@@ -70,7 +70,9 @@ function TangentPropagator(a::Attention)
     function f(x)
         x1, J1 = t1(x)
         x2, J2 = t2(x)
-        sum(x1 .* x2), sum(x1 .* J2, 1) .+ sum(x2 .* J1, 1)
+        y = a(x)
+        J = sum(x1 .* J2, 1) .+ sum(x2 .* J1, 1)
+        y, J
     end
     TangentPropagator(f, a)
 end
@@ -81,7 +83,6 @@ module FluxExtensionsTests
     using FluxExtensions
     using Flux
     using ForwardDiff
-    using Flux.Tracker: value
     using CoordinateTransformations
     using Base.Test
 
@@ -112,9 +113,9 @@ module FluxExtensionsTests
                 x = randn(1)
                 y = m(x)
                 y2, J = mp(x)
-                @test value(y) ≈ value(y2)
-                @test p(x) ≈ value(y)
-                @test value(J) ≈ ForwardDiff.jacobian(p, x)
+                @test Flux.Tracker.value(y) ≈ Flux.Tracker.value(y2)
+                @test p(x) ≈ Flux.Tracker.value(y)
+                @test Flux.Tracker.value(J) ≈ ForwardDiff.jacobian(p, x)
             end
 
             lf = (x, y, J) -> begin
@@ -129,8 +130,8 @@ module FluxExtensionsTests
                 Flux.train!(lf, train_data, opt)
             end
             ŷ, Ĵ = mp([1.0])
-            @test value(ŷ) ≈ [1.2]
-            @test value(Ĵ) ≈ [1.5]
+            @test Flux.Tracker.value(ŷ) ≈ [1.2]
+            @test Flux.Tracker.value(Ĵ) ≈ [1.5]
 
         end
     end
