@@ -3,22 +3,13 @@ __precompile__()
 module Hoppers
 
 using RigidBodyDynamics
-using DrakeVisualizer
-using RigidBodyTreeInspector
 using LCPSim
-using Polyhedra
-using CDDLib
 
-urdf = joinpath(@__DIR__, "hopper.urdf")
+const urdf = joinpath(@__DIR__, "hopper.urdf")
 
 struct Hopper{T}
     mechanism::Mechanism{T}
     environment::Environment{T}
-end
-
-function DrakeVisualizer.setgeometry!(basevis::Visualizer, hopper::Hopper)
-    vis = basevis[:robot]
-    setgeometry!(vis, hopper.mechanism, parse_urdf(urdf, hopper.mechanism))
 end
 
 function Hopper()

@@ -1,20 +1,26 @@
-
-function playback(vis::Visualizer, results::AbstractVector{<:LCPUpdate}, Δt = 0.01)
-    state = MechanismState{Float64}(results[1].state.mechanism)
-    for result in results
-        set_configuration!(state, configuration(result.state))
-        settransform!(vis, state)
-        for (body, contacts) in result.contacts
-            for (i, contact) in enumerate(contacts)
-                f = contact_force(contact)
-                p = transform_to_root(state, contact.point.frame) * contact.point
-                v = vis[:forces][Symbol(body)][Symbol(i)]
-                setgeometry!(v, PolyLine([p.v, (p + 0.1*f).v]; end_head=ArrowHead()))
-            end
-        end
-        sleep(Δt)
-    end
+function playback(vis::MechanismVisualizer, results::AbstractVector{<:LCPUpdate}, Δt = 0.01)
+    ts = cumsum([Δt for r in results])
+    @show length(ts) length(results)
+    animate(vis, ts, [configuration(result.state) for result in results])
 end
+
+# function playback(vis::Visualizer, results::AbstractVector{<:LCPUpdate}, Δt = 0.01)
+
+#     state = MechanismState{Float64}(results[1].state.mechanism)
+#     for result in results
+#         set_configuration!(state, configuration(result.state))
+#         settransform!(vis, state)
+#         for (body, contacts) in result.contacts
+#             for (i, contact) in enumerate(contacts)
+#                 f = contact_force(contact)
+#                 p = transform_to_root(state, contact.point.frame) * contact.point
+#                 v = vis[:forces][Symbol(body)][Symbol(i)]
+#                 setgeometry!(v, PolyLine([p.v, (p + 0.1*f).v]; end_head=ArrowHead()))
+#             end
+#         end
+#         sleep(Δt)
+#     end
+# end
 
 @with_kw struct MIPResults
     solvetime_s::Float64
@@ -89,19 +95,21 @@ end
 end
 
 function nominal_input(x0::MechanismState{X, M}, contacts::AbstractVector{<:Point3D}=Point3D[]) where {X, M}
-    externalwrenches = Dict{RigidBody{M}, Wrench{X}}()
+    # externalwrenches = BodyDict(BodyID(body) => zero(Wrench{X}) for body in bodies(mechanism))
+    externalwrenches = Dict{BodyID, Wrench{X}}()
     g = x0.mechanism.gravitational_acceleration
     for point in contacts
         body = body_fixed_frame_to_body(x0.mechanism, point.frame)
         force = FreeVector3D(g.frame, -mass(x0.mechanism) / length(contacts) * g.v)
         wrench = Wrench(transform_to_root(x0, point.frame) * point, force)
         if haskey(externalwrenches, body)
-            externalwrenches[body] ++ wrench
+            externalwrenches[BodyID(body)] += wrench
         else
-            externalwrenches[body] = wrench
+            externalwrenches[BodyID(body)] = wrench
         end
     end
-    v̇ = zeros(num_velocities(x0))
+    v̇ = similar(velocity(x0))
+    v̇ .= 0
     u = inverse_dynamics(x0, v̇, externalwrenches)
     u .= clamp.(u, LCPSim.all_effort_bounds(x0.mechanism))
     u
@@ -121,12 +129,12 @@ joint_limit_cost(up::LCPSim.LCPUpdate) = sum([sum(jc.λ .^ 2) for jc in up.joint
 joint_limit_cost(results::AbstractVector{<:LCPSim.LCPUpdate}) =
     sum(joint_limit_cost, results)
 
-function create_initial_state(model::Model, x0::MechanismState)
+function create_initial_state(model::Model, x0::MechanismState{X, M}) where {X, M}
     @variable model q0[1:num_positions(x0)]
     JuMP.fix.(q0, configuration(x0))
     @variable model v0[1:num_velocities(x0)]
     JuMP.fix.(v0, velocity(x0))
-    return MechanismState(x0.mechanism, q0, v0)
+    return MechanismState{Variable, M, AffExpr}(x0.mechanism, q0, v0, Vector{Variable}(0))
 end
 
 function run_warmstarts!(model::Model,

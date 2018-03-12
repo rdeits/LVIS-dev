@@ -6,9 +6,11 @@ using Flux
 using ForwardDiff
 using CoordinateTransformations
 
+const value = Flux.Tracker.data
+
 activation(σ) = x -> σ.(x)
 
-plain(layer::Dense) = activation(layer.σ) ∘ AffineMap(Flux.Tracker.value(layer.W), Flux.Tracker.value(layer.b))
+plain(layer::Dense) = activation(layer.σ) ∘ AffineMap(value(layer.W), value(layer.b))
 plain(t::Transformation) = t
 plain(f::Function) = f
 plain(chain::Chain) = reduce(∘, identity, plain.(reverse(chain.layers)))
@@ -29,7 +31,7 @@ Flux.params(p::TangentPropagator) = Flux.params(p.layer)
 
 function _propagate_tangent(f)
     (xJ) -> begin
-        (f(xJ[1]), ForwardDiff.jacobian(f, Flux.Tracker.value(xJ[1])) * xJ[2])
+        (f(xJ[1]), ForwardDiff.jacobian(f, value(xJ[1])) * xJ[2])
     end
 end
 
@@ -59,7 +61,7 @@ function avoid_zero(x, tol=1e-6)
 end
 
 function (a::Attention)(x)
-    sum(a.weights(x) .* avoid_zero.(a.signals(x)), 1)
+    sum(a.weights(x) .* a.signals(x), 1)
 end
 
 Flux.params(a::Attention) = vcat(params(a.signals), params(a.weights))
@@ -113,9 +115,9 @@ module FluxExtensionsTests
                 x = randn(1)
                 y = m(x)
                 y2, J = mp(x)
-                @test Flux.Tracker.value(y) ≈ Flux.Tracker.value(y2)
-                @test p(x) ≈ Flux.Tracker.value(y)
-                @test Flux.Tracker.value(J) ≈ ForwardDiff.jacobian(p, x)
+                @test FluxExtensions.value(y) ≈ FluxExtensions.value(y2)
+                @test p(x) ≈ FluxExtensions.value(y)
+                @test FluxExtensions.value(J) ≈ ForwardDiff.jacobian(p, x)
             end
 
             lf = (x, y, J) -> begin
@@ -130,8 +132,8 @@ module FluxExtensionsTests
                 Flux.train!(lf, train_data, opt)
             end
             ŷ, Ĵ = mp([1.0])
-            @test Flux.Tracker.value(ŷ) ≈ [1.2]
-            @test Flux.Tracker.value(Ĵ) ≈ [1.5]
+            @test FluxExtensions.value(ŷ) ≈ [1.2]
+            @test FluxExtensions.value(Ĵ) ≈ [1.5]
 
         end
     end

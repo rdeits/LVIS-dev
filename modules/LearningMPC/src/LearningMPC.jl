@@ -4,8 +4,8 @@ module LearningMPC
 
 using LCPSim
 using LCPSim: LCPUpdate, contact_force, _getvalue
-using DrakeVisualizer: PolyLine, Visualizer, ArrowHead, settransform!, setgeometry!
 using RigidBodyDynamics
+using MeshCatMechanisms: MechanismVisualizer, animate
 using Parameters: @with_kw
 using MathProgBase.SolverInterface: AbstractMathProgSolver
 using JuMP

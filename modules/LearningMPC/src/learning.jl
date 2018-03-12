@@ -42,11 +42,11 @@ function (s::MPCSampleSink)(x::StateLike, results::MPCResults)
 end
 
 mutable struct PlaybackSink{T} <: MPCSink
-    vis::Visualizer
+    vis::MechanismVisualizer
     Δt::T
     last_trajectory::Vector{LCPSim.LCPUpdate{T, T, T}}
 
-    PlaybackSink(vis::Visualizer, Δt::T) where {T} = new{T}(vis, Δt, [])
+    PlaybackSink(vis::MechanismVisualizer, Δt::T) where {T} = new{T}(vis, Δt, [])
 end
 
 function (p::PlaybackSink)(x::StateLike, results::MPCResults)
@@ -73,11 +73,9 @@ end
 #     end
 # end
 
-function live_viewer(mechanism::Mechanism, vis::Visualizer)
-    state = MechanismState{Float64}(mechanism)
+function live_viewer(vis::MechanismVisualizer)
     x -> begin
-        set_configuration!(state, configuration(x))
-        settransform!(vis, state)
+        set_configuration!(vis, configuration(x))
     end
 end
 

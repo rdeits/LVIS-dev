@@ -1,22 +1,30 @@
 AxisArrays
 BenchmarkTools
+CatViews
 Cbc
 CDDLib
+CSV
 ConditionalJuMP 0.0.2
-DrakeVisualizer 0.2.0
+DataFrames
+Flux 0.5
 ForwardDiff
 FunctionWrappers 0.1.0
 GeometryTypes 0.4.0
 GR
 Gurobi 0.3.2
 IJulia 1.5.0
+Images
+ImageMagick
 Interact 0.4.5
 IntervalArithmetic
-JLD
 JLD2
 JuMP 0.17.1
+LearningStrategies
 Meshing
+MeshCat
+MeshCatMechanisms
 MLDataPattern 0.1.0
+Optim 0.10.1
 Parameters 0.7.2
 Permutations
 PkgDev
@@ -24,20 +32,7 @@ Plots 0.12.0
 Polyhedra
 ProfileView
 ProgressMeter 0.3.4
-PyCall 1.12.0
-PyPlot 2.3.2
 ReverseDiff 0.2
 Revise
-RigidBodyDynamics
-RigidBodyTreeInspector
+RigidBodyDynamics 0.5
 StaticArrays 0.6.0
-LearningStrategies
-Optim 0.10.1
-DataFrames
-CSV
-Query
-Flux 0.3
-MNIST
-Images
-ImageMagick
-CatViews

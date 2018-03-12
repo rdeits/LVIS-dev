@@ -3,8 +3,9 @@ __precompile__()
 module BoxValkyries
 
 using RigidBodyDynamics
-using DrakeVisualizer
-using RigidBodyTreeInspector
+using MeshCat
+using MeshCatMechanisms
+import MeshCatMechanisms: MechanismVisualizer
 using LCPSim
 using Polyhedra
 using CDDLib
@@ -23,17 +24,18 @@ end
 
 const urdf = joinpath(@__DIR__, "box_valkyrie.urdf")
 
-function DrakeVisualizer.setgeometry!(basevis::Visualizer, boxval::BoxValkyrie)
-    vis = basevis[:robot]
-    setgeometry!(vis, boxval.mechanism, parse_urdf(urdf, boxval.mechanism))
-
+function MechanismVisualizer(boxval::BoxValkyrie, basevis::Visualizer=Visualizer())
+    mvis = MechanismVisualizer(boxval.mechanism, URDFVisuals(urdf), basevis["robot"])
     wall_radius = 1.5
     bounds = SimpleHRepresentation(vcat(eye(3), -eye(3)), vcat([wall_radius + 0.1, 0.5, 2.0], -[-wall_radius - 0.1, -0.5, -0.1]))
+    i = 1
     for (body, contacts) in boxval.environment.contacts
         for obstacle in contacts.obstacles
-            addgeometry!(basevis[:environment], CDDPolyhedron{3, Float64}(intersect(obstacle.interior, bounds)))
+            setobject!(basevis["environment"]["$i"], CDDPolyhedron{3, Float64}(intersect(obstacle.interior, bounds)))
+            i += 1
         end
     end
+    mvis
 end
 
 function BoxValkyrie(include_wall=true)
