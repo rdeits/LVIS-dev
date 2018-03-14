@@ -38,9 +38,9 @@ function MechanismVisualizer(boxval::BoxValkyrie, basevis::Visualizer=Visualizer
     mvis
 end
 
-function BoxValkyrie(include_wall=true)
+function BoxValkyrie(include_wall=true, base_type=planar_base)
     urdf_mech = parse_urdf(Float64, urdf)
-    mechanism, base = planar_revolute_base()
+    mechanism, base = base_type()
     attach!(mechanism, base, urdf_mech)
     world = root_body(mechanism)
 
@@ -102,7 +102,6 @@ function default_costs(boxval::BoxValkyrie)
     qq = zeros(num_positions(x))
     qq[configuration_range(x, findjoint(x.mechanism, "base_x"))]        .= 0
     qq[configuration_range(x, findjoint(x.mechanism, "base_z"))]        .= 10
-    qq[configuration_range(x, findjoint(x.mechanism, "base_rotation"))] .= 500
     qq[configuration_range(x, findjoint(x.mechanism, "core_to_rh_extension"))]  .= 0.5
     qq[configuration_range(x, findjoint(x.mechanism, "core_to_lh_extension"))]  .= 0.5
     qq[configuration_range(x, findjoint(x.mechanism, "core_to_rh_rotation"))]  .= 0.5
@@ -115,10 +114,14 @@ function default_costs(boxval::BoxValkyrie)
     qv = fill(1e-3, num_velocities(x))
     qv[velocity_range(x, findjoint(x.mechanism, "base_x"))] .= 10
     qv[velocity_range(x, findjoint(x.mechanism, "base_z"))] .= 1
-    qv[velocity_range(x, findjoint(x.mechanism, "base_rotation"))] .= 20
+
+    if "base_rotation" in string.(joints(x.mechanism))
+        qq[configuration_range(x, findjoint(x.mechanism, "base_rotation"))] .= 500
+        qv[velocity_range(x, findjoint(x.mechanism, "base_rotation"))] .= 20
+    end
 
     Q = diagm(vcat(qq, qv))
-    
+
     # minimize (rx - lx)^2 = rx^2 - 2rxlx + lx^2
     rx = configuration_range(x, findjoint(x.mechanism, "core_to_rf_extension"))
     lx = configuration_range(x, findjoint(x.mechanism, "core_to_lf_extension"))

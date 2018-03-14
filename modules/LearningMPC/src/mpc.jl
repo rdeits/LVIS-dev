@@ -1,6 +1,5 @@
 function playback(vis::MechanismVisualizer, results::AbstractVector{<:LCPUpdate}, Δt = 0.01)
     ts = cumsum([Δt for r in results])
-    @show length(ts) length(results)
     animate(vis, ts, [configuration(result.state) for result in results])
 end
 
