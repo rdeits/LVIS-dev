@@ -16,11 +16,10 @@ function Hopper()
     mechanism = parse_urdf(Float64, urdf)
     world = root_body(mechanism)
     foot = findbody(mechanism, "foot")
-    floor = planar_obstacle(default_frame(world), [0, 0, 1.], [0, 0, 0.], 2.0)
-    env = Environment(
-        Dict(foot => ContactEnvironment(
-                [Point3D(default_frame(foot), 0., 0., 0.)],
-                [floor])))
+    floor = planar_obstacle(default_frame(world), [0, 0, 1.], [0, 0, 0.], 2.0, :xz)
+    env = Environment([
+        (foot, Point3D(default_frame(foot), 0., 0, 0), floor)
+    ])
     Hopper(mechanism, env)
 end
 

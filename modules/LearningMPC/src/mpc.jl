@@ -50,11 +50,11 @@ function Sample(x::Union{MechanismState, LCPSim.StateRecord}, r::MPCResults)
         u = get(r.lcp_updates)[1].input
     end
     if isnull(r.jacobian)
-        J = fill(NaN, num_velocities(x), length(state_vector(x)))
+        J = fill(NaN, num_velocities(x), length(Vector(x)))
     else
         J = get(r.jacobian)
     end
-    Sample(state_vector(x), hcat(u, J), r.warmstart_costs, r.mip)
+    Sample(Vector(x), hcat(u, J), r.warmstart_costs, r.mip)
 end
 
 struct LQRSolution{T} <: Function
@@ -74,10 +74,10 @@ function LQRSolution(x0::MechanismState{T}, Q, R, Δt, contacts::AbstractVector{
     RigidBodyDynamics.setdirty!(x0)
     K, S = LCPSim.ContactLQR.contact_dlqr(x0, u0, Q, R, Δt, contacts)
     set_velocity!(x0, v0)
-    LQRSolution{T}(Q, R, K, S, copy(state_vector(x0)), copy(u0), Δt)
+    LQRSolution{T}(Q, R, K, S, copy(Vector(x0)), copy(u0), Δt)
 end
 
-(c::LQRSolution)(x) = -c.K * (state_vector(x) .- c.x0) .+ c.u0
+(c::LQRSolution)(x) = -c.K * (Vector(x) .- c.x0) .+ c.u0
 
 function zero_element!(sol::LQRSolution, idx::Integer)
     sol.S[idx, :] .= 0
@@ -221,7 +221,7 @@ function run_mpc(x0::MechanismState,
     end
 
     exsol = try
-        ExplicitQPs.explicit_solution(model, state_vector(x0_var))
+        ExplicitQPs.explicit_solution(model, Vector(x0_var))
     catch e
         if isa(e, Base.LinAlg.SingularException)
             return MPCResults{Float64}(results_opt_value, nothing, warmstart_costs, mip_results)

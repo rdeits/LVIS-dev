@@ -46,8 +46,8 @@ function BoxValkyrie(include_wall=true, base_type=planar_base)
 
 
     # http://nvlpubs.nist.gov/nistpubs/jres/28/jresv28n4p439_A1b.pdf
-    floor = planar_obstacle(default_frame(world), [0, 0, 1.], [0, 0, 0.], 2.0)
-    wall = planar_obstacle(default_frame(world), [1., 0, 0], [-1.0, 0, 0], 0.5)
+    floor = planar_obstacle(default_frame(world), [0, 0, 1.], [0, 0, 0.], 2.0, :xz)
+    wall = planar_obstacle(default_frame(world), [1., 0, 0], [-1.0, 0, 0], 0.5, :xz)
 
     # contact_limbs = findbody.(mechanism, ["rh", "lh", "rf", "lf"])
     # hands = findbody.(mechanism, ["rh", "lh"])
@@ -58,28 +58,17 @@ function BoxValkyrie(include_wall=true, base_type=planar_base)
     lh = findbody(mechanism, "lh")
 
     if include_wall
-        env = Environment(
-            Dict(
-                 rf => ContactEnvironment(
-                    [Point3D(default_frame(rf), SVector(0., 0, 0))],
-                    [floor]),
-                 lf => ContactEnvironment(
-                    [Point3D(default_frame(lf), SVector(0., 0, 0))],
-                    [floor, wall]),
-                 lh => ContactEnvironment(
-                    [Point3D(default_frame(lh), SVector(0., 0, 0))],
-                    [wall]),
-                 ))
+        env = Environment([
+            (rf, Point3D(default_frame(rf), SVector(0., 0, 0)), floor),
+            (lf, Point3D(default_frame(lf), SVector(0., 0, 0)), floor),
+            (lf, Point3D(default_frame(lf), SVector(0., 0, 0)), wall),
+            (lh, Point3D(default_frame(lh), SVector(0., 0, 0)), wall)
+        ])
     else
-        env = Environment(
-            Dict(
-                 rf => ContactEnvironment(
-                    [Point3D(default_frame(rf), SVector(0., 0, 0))],
-                    [floor]),
-                 lf => ContactEnvironment(
-                    [Point3D(default_frame(lf), SVector(0., 0, 0))],
-                    [floor]),
-                 ))
+        env = Environment([
+            (rf, Point3D(default_frame(rf), SVector(0., 0, 0)), floor),
+            (lf, Point3D(default_frame(lf), SVector(0., 0, 0)), floor)
+        ])
     end
 
     BoxValkyrie(mechanism, env)
