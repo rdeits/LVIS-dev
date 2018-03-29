@@ -29,11 +29,9 @@ function MechanismVisualizer(boxval::BoxValkyrie, basevis::Visualizer=Visualizer
     wall_radius = 1.5
     bounds = SimpleHRepresentation(vcat(eye(3), -eye(3)), vcat([wall_radius + 0.1, 0.5, 2.0], -[-wall_radius - 0.1, -0.5, -0.1]))
     i = 1
-    for (body, contacts) in boxval.environment.contacts
-        for obstacle in contacts.obstacles
-            setobject!(basevis["environment"]["$i"], CDDPolyhedron{3, Float64}(intersect(obstacle.interior, bounds)))
-            i += 1
-        end
+    for (body, point, obstacle) in boxval.environment.contacts
+        setobject!(basevis["environment"]["$i"], CDDPolyhedron{3, Float64}(intersect(obstacle.interior, bounds)))
+        i += 1
     end
     mvis
 end
