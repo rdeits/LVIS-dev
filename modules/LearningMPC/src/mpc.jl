@@ -180,7 +180,8 @@ function run_mpc(x0::MechanismState,
 
     model = Model(solver=params.mip_solver)
     x0_var = create_initial_state(model, x0)
-    cost = results -> (lqr_cost(results, lqr) + joint_limit_cost(results))
+    # cost = results -> (lqr_cost(results, lqr) + joint_limit_cost(results))
+    cost = results -> lqr_cost(results, lqr)
     _, results_opt = LCPSim.optimize(x0_var, env, params.Δt, params.horizon, model)
     @objective model Min cost(results_opt)
 
