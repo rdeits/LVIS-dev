@@ -36,7 +36,7 @@ function MechanismVisualizer(boxval::BoxValkyrie, basevis::Visualizer=Visualizer
     mvis
 end
 
-function BoxValkyrie(include_wall=true, base_type=planar_base)
+function BoxValkyrie(include_wall=true, base_type=planar_revolute_base)
     urdf_mech = parse_urdf(Float64, urdf)
     mechanism, base = base_type()
     attach!(mechanism, base, urdf_mech)
