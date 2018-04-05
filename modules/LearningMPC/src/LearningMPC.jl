@@ -10,9 +10,7 @@ using Parameters: @with_kw
 using MathProgBase.SolverInterface: AbstractMathProgSolver
 using JuMP
 using CoordinateTransformations: AffineMap
-import Nets
 import ConditionalJuMP
-import ExplicitQPs
 
 export playback
 
@@ -20,6 +18,11 @@ const StateLike = Union{MechanismState, LCPSim.StateRecord}
 
 include("mpc.jl")
 include("learning.jl")
-include("onlinempc.jl")
+
+function playback(vis::MechanismVisualizer, results::AbstractVector{<:LCPUpdate}, Δt = 0.01)
+    ts = cumsum([Δt for r in results])
+    animate(vis, ts, [configuration(result.state) for result in results])
+end
+
 
 end

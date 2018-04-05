@@ -1,29 +1,3 @@
-function sensitive_loss(net, λ)
-    nx = length(net.input_tform.v)
-    nu = length(net.output_tform.v)
-    q = fill(λ, 1, 1 + nx)
-    q[1] = 1 - λ
-    function loss(params, x, y)
-        @assert size(x) == (nx,)
-        @assert size(y) == (nu, 1 + nx)
-        sum(abs2,
-            q .* (Nets.predict_sensitivity(similar(net, params), x) .- y)
-            )
-    end
-    return loss
-end
-
-function control_net(mechanism::Mechanism, hidden_widths::Vector, activation::Function)
-    nx = num_positions(mechanism) + num_velocities(mechanism)
-    nu = num_velocities(mechanism)
-    widths = [nx, hidden_widths..., nu]
-    x_to_u = AffineMap(eye(nx), zeros(nx))
-    v_to_y = AffineMap(diagm([max(abs(b.lower), abs(b.upper)) for b in LCPSim.all_effort_bounds(mechanism)]),
-                       zeros(nu))
-    params = 0.1 * randn(Nets.Params{Float64}, widths).data
-    Nets.Net(Nets.Params(widths, params), activation, x_to_u, v_to_y)
-end
-
 abstract type MPCSink <: Function end
 
 struct MPCSampleSink{T} <: MPCSink

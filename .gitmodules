@@ -1,9 +1,3 @@
-[submodule "submodules/AxisArrayVariables"]
-	path = submodules/AxisArrayVariables
-	url = git@github.com:rdeits/AxisArrayVariables.jl
-[submodule "submodules/ExplicitQPs"]
-	path = submodules/ExplicitQPs
-	url = git@github.com:rdeits/ExplicitQPs.jl
 [submodule "submodules/LCPSim"]
 	path = submodules/LCPSim
 	url = git@github.com:rdeits/LCPSim.jl

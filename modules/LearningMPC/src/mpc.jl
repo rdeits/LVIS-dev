@@ -1,26 +1,3 @@
-function playback(vis::MechanismVisualizer, results::AbstractVector{<:LCPUpdate}, Δt = 0.01)
-    ts = cumsum([Δt for r in results])
-    animate(vis, ts, [configuration(result.state) for result in results])
-end
-
-# function playback(vis::Visualizer, results::AbstractVector{<:LCPUpdate}, Δt = 0.01)
-
-#     state = MechanismState{Float64}(results[1].state.mechanism)
-#     for result in results
-#         set_configuration!(state, configuration(result.state))
-#         settransform!(vis, state)
-#         for (body, contacts) in result.contacts
-#             for (i, contact) in enumerate(contacts)
-#                 f = contact_force(contact)
-#                 p = transform_to_root(state, contact.point.frame) * contact.point
-#                 v = vis[:forces][Symbol(body)][Symbol(i)]
-#                 setgeometry!(v, PolyLine([p.v, (p + 0.1*f).v]; end_head=ArrowHead()))
-#             end
-#         end
-#         sleep(Δt)
-#     end
-# end
-
 @with_kw struct MIPResults
     solvetime_s::Float64
     objective_value::Float64
@@ -29,16 +6,15 @@ end
 
 struct Sample{T}
     state::Vector{T}
-    uJ::Matrix{T}
+    input::Vector{T}
     warmstart_costs::Vector{T}
     mip::MIPResults
 end
 
-features(s::Sample) = (s.state, s.uJ)
+features(s::Sample) = (s.state, s.mip.objective_bound, s.mip.objective_value)
 
 struct MPCResults{T}
     lcp_updates::Nullable{Vector{LCPSim.LCPUpdate{T, T, T}}}
-    jacobian::Nullable{Matrix{T}}
     warmstart_costs::Vector{T}
     mip::MIPResults
 end
@@ -49,12 +25,7 @@ function Sample(x::Union{MechanismState, LCPSim.StateRecord}, r::MPCResults)
     else
         u = get(r.lcp_updates)[1].input
     end
-    if isnull(r.jacobian)
-        J = fill(NaN, num_velocities(x), length(Vector(x)))
-    else
-        J = get(r.jacobian)
-    end
-    Sample(Vector(x), hcat(u, J), r.warmstart_costs, r.mip)
+    Sample(Vector(x), u, r.warmstart_costs, r.mip)
 end
 
 struct LQRSolution{T} <: Function
@@ -123,19 +94,6 @@ function lqr_cost(results::AbstractVector{<:LCPSim.LCPUpdate},
             (results[end].state.state .- lqr.x0)' * lqr.S * (results[end].state.state .- lqr.x0))
 end
 
-joint_limit_cost(up::LCPSim.LCPUpdate) = sum([sum(jc.λ .^ 2) for jc in up.joint_contacts])
-
-joint_limit_cost(results::AbstractVector{<:LCPSim.LCPUpdate}) =
-    sum(joint_limit_cost, results)
-
-function create_initial_state(model::Model, x0::MechanismState{X, M}) where {X, M}
-    @variable model q0[1:num_positions(x0)]
-    JuMP.fix.(q0, configuration(x0))
-    @variable model v0[1:num_velocities(x0)]
-    JuMP.fix.(v0, velocity(x0))
-    return MechanismState{Variable, M, AffExpr}(x0.mechanism, q0, v0, Vector{Variable}(0))
-end
-
 function run_warmstarts!(model::Model,
                          results::AbstractVector{<:LCPUpdate},
                          x0::MechanismState,
@@ -160,30 +118,14 @@ function run_warmstarts!(model::Model,
     return warmstart_costs
 end
 
-function add_diagonal_cost!(model::Model, coeff=1e-6)
-    # Ensure objective is strictly PD
-    nvars = length(model.colCat)
-    vars = [Variable(model, i) for i in 1:nvars]
-    JuMP.setobjective(model, :Min, JuMP.getobjective(model) + QuadExpr(vars, vars, [1e-6 for v in vars], AffExpr([], [], 0.0)))
-end
-
-
 function run_mpc(x0::MechanismState,
                  env::Environment,
                  params::MPCParams,
                  lqr::LQRSolution,
                  warmstart_controllers::AbstractVector{<:Function}=[])
-    # base_x = findjoint(x0.mechanism, "base_x")
-    # set_configuration!(x0,
-    #                    base_x,
-    #                    lqr.x0[configuration_range(x0, base_x)])
-
     model = Model(solver=params.mip_solver)
-    x0_var = create_initial_state(model, x0)
-    # cost = results -> (lqr_cost(results, lqr) + joint_limit_cost(results))
-    cost = results -> lqr_cost(results, lqr)
-    _, results_opt = LCPSim.optimize(x0_var, env, params.Δt, params.horizon, model)
-    @objective model Min cost(results_opt)
+    _, results_opt = LCPSim.optimize(x0, env, params.Δt, params.horizon, model)
+    @objective model Min lqr_cost(results_opt, lqr)
 
     warmstart_costs = run_warmstarts!(model, results_opt, x0, env, params, cost, warmstart_controllers)
     ConditionalJuMP.handle_constant_objective!(model)
@@ -203,35 +145,10 @@ function run_mpc(x0::MechanismState,
     results_opt_value = getvalue.(results_opt)
 
     if any(isnan, results_opt_value[1].input)
-        return MPCResults{Float64}(nothing, nothing, warmstart_costs, mip_results)
+        return MPCResults{Float64}(nothing, warmstart_costs, mip_results)
+    else
+        return MPCResults{Float64}(results_opt_value, warmstart_costs, mip_results)
     end
-
-    # Now fix the binary variables and re-solve to get updated duals
-    ConditionalJuMP.warmstart!(model, true)
-    @assert sum(model.colCat .== :Bin) == 0 "Model should no longer have any binary variables"
-
-    add_diagonal_cost!(model)
-    try
-        status = solve(model, suppress_warnings=true)
-        if status != :Optimal
-            return MPCResults{Float64}(results_opt_value, nothing, warmstart_costs, mip_results)
-        end
-    catch e
-        println("captured: $e")
-        return MPCResults{Float64}(results_opt_value, nothing, warmstart_costs, mip_results)
-    end
-
-    exsol = try
-        ExplicitQPs.explicit_solution(model, Vector(x0_var))
-    catch e
-        if isa(e, Base.LinAlg.SingularException)
-            return MPCResults{Float64}(results_opt_value, nothing, warmstart_costs, mip_results)
-        else
-            rethrow(e)
-        end
-    end
-    J = ExplicitQPs.jacobian(exsol, results_opt[1].input)
-    return MPCResults{Float64}(results_opt_value, J, warmstart_costs, mip_results)
 end
 
 mutable struct MPCController{T, P <: MPCParams, M <: MechanismState}
@@ -269,7 +186,7 @@ function (c::MPCController)(x0::Union{MechanismState, LCPSim.StateRecord})
     set_velocity!(c.scratch_state, velocity(x0))
     c.callback(c.scratch_state, results)
     if !isnull(results.lcp_updates)
-        return get(results.lcp_updates)[1].input
+        return first(get(results.lcp_updates)).input
     else
         return zeros(length(c.lqr.u0))
     end

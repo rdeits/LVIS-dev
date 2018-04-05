@@ -2,19 +2,13 @@ AxisArrays
 BenchmarkTools
 Cbc
 CDDLib
-CSV
 ConditionalJuMP 0.0.2
-DataFrames
 Flux 0.5
 ForwardDiff
 GeometryTypes 0.4.0
 GR
 Gurobi 0.3.2
 IJulia 1.5.0
-Images
-ImageMagick
-Interact 0.4.5
-IntervalArithmetic
 JLD2
 JuMP 0.17.1
 MeshCat
