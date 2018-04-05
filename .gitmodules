@@ -1,6 +1,3 @@
-[submodule "py-mpc"]
-	path = py-mpc
-	url = git@github.com:rdeits/py-mpc
 [submodule "submodules/QHull"]
 	path = submodules/QHull
 	url = git@github.com:JuliaPolyhedra/QHull.jl
