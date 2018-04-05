@@ -1,9 +1,3 @@
-[submodule "submodules/QHull"]
-	path = submodules/QHull
-	url = git@github.com:JuliaPolyhedra/QHull.jl
-[submodule "submodules/StochasticOptimization"]
-	path = submodules/StochasticOptimization
-	url = git@github.com:JuliaML/StochasticOptimization.jl
 [submodule "submodules/AxisArrayVariables"]
 	path = submodules/AxisArrayVariables
 	url = git@github.com:rdeits/AxisArrayVariables.jl
