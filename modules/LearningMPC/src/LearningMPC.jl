@@ -12,12 +12,15 @@ using JuMP
 using CoordinateTransformations: AffineMap
 import ConditionalJuMP
 
-export playback
+export playback,
+       MPCParams,
+       LQRSolution
 
 const StateLike = Union{MechanismState, LCPSim.StateRecord}
 
 include("mpc.jl")
 include("learning.jl")
+include("Models/Models.jl")
 
 function playback(vis::MechanismVisualizer, results::AbstractVector{<:LCPUpdate}, Δt = 0.01)
     ts = cumsum([Δt for r in results])

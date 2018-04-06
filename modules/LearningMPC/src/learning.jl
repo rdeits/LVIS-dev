@@ -82,11 +82,6 @@ function randomize!(x::MechanismState, xstar::MechanismState, σ_q = 0.1, σ_v =
     set_velocity!(x, velocity(xstar) .+ σ_v .* randn(num_velocities(xstar)))
 end
 
-struct Snapshot{T}
-    params::Vector{T}
-    net::Nets.Net
-end
-
 struct Dataset{T}
     lqrsol::LQRSolution{T}
     training_data::Vector{Sample{T}}
@@ -95,16 +90,3 @@ struct Dataset{T}
 
     Dataset(lqrsol::LQRSolution{T}) where {T} = new{T}(lqrsol, [], [], [])
 end
-
-training_loss(net::Nets.Net, data::Dataset) = average_loss(net, data.training_data)
-validation_loss(net::Nets.Net, data::Dataset) = average_loss(net, data.validation_data)
-testing_loss(net::Nets.Net, data::Dataset) = average_loss(net, data.testing_data)
-
-function average_loss(net::Nets.Net, samples::Vector{<:Sample})
-    mean(samples) do sample
-        x, uJ = features(sample)
-        sum(abs2, Nets.predict(net, x) - uJ[:, 1])
-    end
-end
-
-

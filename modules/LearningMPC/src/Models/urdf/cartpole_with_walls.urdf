@@ -1,0 +1,156 @@
+<?xml version="1.0"?>
+
+<!--
+This file was MODIFIED from the original cartpole.urdf distributed with bullet3, under the following license:
+
+Bullet Continuous Collision Detection and Physics Library
+http://bulletphysics.org
+
+This software is provided 'as-is', without any express or implied warranty.
+In no event will the authors be held liable for any damages arising from the use of this software.
+Permission is granted to anyone to use this software for any purpose,
+including commercial applications, and to alter it and redistribute it freely,
+subject to the following restrictions:
+
+1. The origin of this software must not be misrepresented; you must not claim that you wrote the original software. If you use this software in a product, an acknowledgment in the product documentation would be appreciated but is not required.
+2. Altered source versions must be plainly marked as such, and must not be misrepresented as being the original software.
+3. This notice may not be removed or altered from any source distribution.
+
+-->
+<robot name="cartpole">
+    <link name="slideBar">
+    <visual>
+      <geometry>
+        <box size="30 0.05 0.05"/>
+      </geometry>
+      <origin xyz="0 0 0"/>
+      <material name="green">
+        <color rgba="0 0.8 .8 1"/>
+      </material>
+    </visual>
+    <inertial>
+      <mass value="0"/>
+      <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+    </inertial>
+  </link>
+
+  <link name="cart">
+    <visual>
+      <geometry>
+        <box size="0.5 0.5 0.2"/>
+      </geometry>
+      <origin xyz="0 0 0"/>
+      <material name="blue">
+        <color rgba="0 0 .8 1"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+          <box size="0.5 0.5 0.2"/>
+      </geometry>
+      <origin xyz="0 0 0"/>
+    </collision>
+    <inertial>
+      <mass value="0.1"/>
+      <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+    </inertial>
+  </link>
+
+  <joint name="slider_to_cart" type="prismatic">
+    <axis xyz="1 0 0"/>
+    <origin xyz="0.0 0.0 0.0"/>
+    <parent link="slideBar"/>
+    <child link="cart"/>
+    <limit effort="20.0" lower="-15" upper="15" velocity="50"/>
+  </joint>
+
+  <link name="pole">
+    <visual>
+      <geometry>
+        <box size="0.05 0.05 1.0"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0.5"/>
+      <material name="white">
+        <color rgba="1 1 1 1"/>
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0 1"/>
+      <geometry>
+        <sphere radius="0.01"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 1"/>
+      <geometry>
+        <sphere radius="0"/>
+      </geometry>
+    </collision>
+    <inertial>
+    <origin xyz="0 0 0.5"/>
+      <mass value="1"/>
+      <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+    </inertial>
+  </link>
+
+  <joint name="cart_to_pole" type="continuous">
+    <axis xyz="0 1 0"/>
+    <origin xyz="0.0 0.0 0"/>
+    <parent link="cart"/>
+    <child link="pole"/>
+    <limit effort="0" lower="-15" upper="15" velocity="50"/>
+  </joint>
+
+  <link name="left_wall">
+    <visual>
+      <origin xyz="-1.55 0 0"/>
+      <geometry>
+        <box size="0.1 0.5 2.5"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="-1.55 0 0"/>
+      <geometry>
+        <box size="0.1 0.5 2.5"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="-1.5 0 0"/>
+      <geometry>
+        <plane normal="1 0 0"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="slide_to_left_wall" type="fixed">
+    <parent link="slideBar"/>
+    <child link="left_wall"/>
+  </joint>
+
+  <link name="right_wall">
+    <visual>
+      <origin xyz="1.55 0 0"/>
+      <geometry>
+        <box size="0.1 0.5 2.5"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="1.55 0 0"/>
+      <geometry>
+        <box size="0.1 0.5 2.5"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="1.5 0 0"/>
+      <geometry>
+        <plane normal="-1 0 0"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="slide_to_right_wall" type="fixed">
+    <parent link="slideBar"/>
+    <child link="right_wall"/>
+  </joint>
+
+</robot>

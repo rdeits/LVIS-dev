@@ -1,8 +1,60 @@
 <?xml version="1.0"?>
 
-<robot xmlns="http://drake.mit.edu"
- xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
- xsi:schemaLocation="http://drake.mit.edu ../../doc/drakeURDF.xsd" name="BoxValkyrie">
+<robot name="BoxAtlas">
+  <link name="root">
+  </link>
+
+  <link name="floor">
+    <visual>
+      <origin xyz="0.5 0 -0.05"/>
+      <geometry>
+        <box size="3 1 0.1"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0.5 0 -0.05"/>
+      <geometry>
+        <box size="3 1 0.1"/>
+      </geometry>
+    </collision>
+    <collision>
+      <geometry>
+        <plane normal="0 0 1"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="root_to_floor" type="fixed">
+    <parent link="root"/>
+    <child link="floor"/>
+  </joint>
+
+  <link name="wall">
+    <visual>
+      <origin xyz="-1.05 0 1"/>
+      <geometry>
+        <box size="0.1 1 2.2"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="-1.05 0 1"/>
+      <geometry>
+        <box size="0.1 1 2"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="-1 0 1"/>
+      <geometry>
+        <plane normal="1 0 0"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="root_to_wall" type="fixed">
+    <parent link="root"/>
+    <child link="wall"/>
+  </joint>
+
   <link name="core">
     <inertial>
       <mass value="1.0"/>
@@ -16,6 +68,12 @@
       </geometry>
     </visual>
   </link>
+
+  <joint name="floating_base" type="planar">
+    <axis xyz="0 -1 0"/>
+    <parent link="root"/>
+    <child link="core"/>
+  </joint>
 
   <link name="rh_dummy">
     <inertial>
@@ -41,6 +99,11 @@
         <sphere radius="0.05"/>
       </geometry>
     </visual>
+    <collision>
+      <geometry>
+        <sphere radius="0"/>
+      </geometry>
+    </collision>
   </link>
 
   <joint name="core_to_rh_rotation" type="revolute">
@@ -83,6 +146,11 @@
         <sphere radius="0.05"/>
       </geometry>
     </visual>
+    <collision>
+      <geometry>
+        <sphere radius="0"/>
+      </geometry>
+    </collision>
   </link>
 
   <joint name="core_to_lh_rotation" type="revolute">
@@ -125,6 +193,11 @@
         <sphere radius="0.05"/>
       </geometry>
     </visual>
+    <collision>
+      <geometry>
+        <sphere radius="0"/>
+      </geometry>
+    </collision>
   </link>
 
   <joint name="core_to_rf_rotation" type="revolute">
@@ -167,6 +240,11 @@
         <sphere radius="0.05"/>
       </geometry>
     </visual>
+    <collision>
+      <geometry>
+        <sphere radius="0"/>
+      </geometry>
+    </collision>
   </link>
 
   <joint name="core_to_lf_rotation" type="revolute">
