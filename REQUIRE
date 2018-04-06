@@ -1,7 +1,6 @@
 AxisArrays
 BenchmarkTools
 Cbc
-CDDLib
 ConditionalJuMP 0.0.2
 Flux 0.5
 ForwardDiff
@@ -17,7 +16,6 @@ MLDataPattern 0.1.0
 Parameters 0.7.2
 PkgDev
 Plots 0.12.0
-Polyhedra
 ProfileView
 ProgressMeter 0.3.4
 ReverseDiff 0.2
