@@ -50,14 +50,16 @@ function nominal_input(x0::MechanismState{X, M}, contacts::AbstractVector{<:Poin
     u
 end
 
-function lqr_cost(results::AbstractVector{<:LCPSim.LCPUpdate},
-                  lqr::LQRSolution)
+function lqr_cost(lqr::LQRSolution, 
+                  results::AbstractVector{<:LCPSim.LCPUpdate})
     return (sum(
                 (r.state.state .- lqr.x0)' * lqr.Q * (r.state.state .- lqr.x0) +
                 (r.input .- lqr.u0)' * lqr.R * (r.input .- lqr.u0)
                 for r in results)  +
             (results[end].state.state .- lqr.x0)' * lqr.S * (results[end].state.state .- lqr.x0))
 end
+
+(lqr::LQRSolution)(x0::StateLike, results::AbstractVector{<:LCPSim.LCPUpdate}) = lqr_cost(lqr, results)
 
 function run_warmstarts!(model::Model,
                          results::AbstractVector{<:LCPUpdate},
@@ -73,7 +75,7 @@ function run_warmstarts!(model::Model,
         set_velocity!(x0, v0)
         LCPSim.simulate(x0, controller, env, params.Δt, params.horizon, params.lcp_solver; relinearize=false)
     end
-    warmstart_costs = [isempty(w) ? Inf : cost(w) for w in warmstarts]
+    warmstart_costs = [isempty(w) ? Inf : cost(x0, w) for w in warmstarts]
     idx = indmin(warmstart_costs)
     if isfinite(warmstart_costs[idx])
         best_warmstart = warmstarts[idx]
@@ -86,13 +88,13 @@ end
 function run_mpc(x0::MechanismState,
                  env::Environment,
                  params::MPCParams,
-                 lqr::LQRSolution,
+                 cost,
                  warmstart_controllers::AbstractVector{<:Function}=[])
     model = Model(solver=params.mip_solver)
     _, results_opt = LCPSim.optimize(x0, env, params.Δt, params.horizon, model)
-    @objective model Min lqr_cost(results_opt, lqr)
+    @objective model Min cost(x0, results_opt)
 
-    warmstart_costs = run_warmstarts!(model, results_opt, x0, env, params, r -> lqr_cost(r, lqr), warmstart_controllers)
+    warmstart_costs = run_warmstarts!(model, results_opt, x0, env, params, cost, warmstart_controllers)
     ConditionalJuMP.handle_constant_objective!(model)
     try
         solve(model, suppress_warnings=true)
@@ -116,24 +118,24 @@ function run_mpc(x0::MechanismState,
     end
 end
 
-mutable struct MPCController{T, P <: MPCParams, M <: MechanismState}
+mutable struct MPCController{T, C <: Function, P <: MPCParams, M <: MechanismState} <: Function
     scratch_state::M
     env::Environment{T}
     params::P
-    lqr::LQRSolution{T}
+    cost::C
     warmstart_controllers::Vector{Function}
     callback::Function
 end
 
 function MPCController(model::AbstractModel,
                        params::MPCParams,
-                       lqr::LQRSolution,
+                       cost,
                        warmstart_controllers::AbstractVector{<:Function})
     scratch_state = MechanismState{Float64}(mechanism(model))
     MPCController(scratch_state,
                   environment(model),
                   params,
-                  lqr,
+                  cost,
                   convert(Vector{Function}, warmstart_controllers),
                   (state, results) -> nothing)
 end
@@ -144,7 +146,7 @@ function (c::MPCController)(x0::Union{MechanismState, LCPSim.StateRecord})
     results = run_mpc(c.scratch_state,
                       c.env,
                       c.params,
-                      c.lqr,
+                      c.cost,
                       c.warmstart_controllers)
     set_configuration!(c.scratch_state, configuration(x0))
     set_velocity!(c.scratch_state, velocity(x0))
@@ -152,6 +154,6 @@ function (c::MPCController)(x0::Union{MechanismState, LCPSim.StateRecord})
     if !isnull(results.lcp_updates)
         return first(get(results.lcp_updates)).input
     else
-        return zeros(length(c.lqr.u0))
+        return zeros(num_velocities(c.scratch_state))
     end
 end

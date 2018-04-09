@@ -10,11 +10,15 @@ using Parameters: @with_kw
 using MathProgBase.SolverInterface: AbstractMathProgSolver
 using JuMP
 using CoordinateTransformations: AffineMap
+using Flux
+using FluxExtensions
 import ConditionalJuMP
 
 export playback,
        MPCParams,
-       LQRSolution
+       LQRSolution,
+       MPCController
+       
 
 const StateLike = Union{MechanismState, LCPSim.StateRecord}
 
