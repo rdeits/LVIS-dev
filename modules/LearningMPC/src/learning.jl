@@ -10,7 +10,7 @@ end
 Base.empty!(s::MPCSampleSink) = empty!(s.samples)
 
 function (s::MPCSampleSink)(x::StateLike, results::MPCResults)
-    if s.keep_nulls || (!isnull(results.lcp_updates) && !isnull(results.jacobian))
+    if s.keep_nulls || !isnull(results.lcp_updates)
         push!(s.samples, LearningMPC.Sample(x, results))
     end
 end
