@@ -216,7 +216,7 @@
     <limit lower="0.4" upper="0.9" velocity="100" effort="20"/>
   </joint>
 
-    <link name="lf_dummy">
+  <link name="lf_dummy">
     <inertial>
       <mass value="0.0"/>
       <origin rpy="0 0 0" xyz="0 0 0"/>

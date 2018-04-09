@@ -9,6 +9,7 @@ using Gurobi
 
 export Hopper,
        CartPole,
+       BoxAtlas,
        AbstractModel,
        mechanism,
        environment,
@@ -29,7 +30,7 @@ function urdf end
 MeshCatMechanisms.MechanismVisualizer(h::AbstractModel, v::Visualizer=Visualizer()) = MechanismVisualizer(mechanism(h), URDFVisuals(urdf(h)), v)
 
 include("cartpole.jl")
-# include("boxatlas.jl")
+include("boxatlas.jl")
 include("hopper.jl")
 
 end

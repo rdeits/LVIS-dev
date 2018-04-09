@@ -28,41 +28,6 @@ function Sample(x::Union{MechanismState, LCPSim.StateRecord}, r::MPCResults)
     Sample(Vector(x), u, r.warmstart_costs, r.mip)
 end
 
-struct LQRSolution{T} <: Function
-    Q::Matrix{T}
-    R::Matrix{T}
-    K::Matrix{T}
-    S::Matrix{T}
-    x0::Vector{T}
-    u0::Vector{T}
-    Δt::T
-end
-
-function LQRSolution(x0::MechanismState{T}, Q, R, Δt, contacts::AbstractVector{<:Point3D}=Point3D[]) where T
-    u0 = nominal_input(x0, contacts)
-    v0 = copy(velocity(x0))
-    velocity(x0) .= 0
-    RigidBodyDynamics.setdirty!(x0)
-    K, S = LCPSim.ContactLQR.contact_dlqr(x0, u0, Q, R, Δt, contacts)
-    set_velocity!(x0, v0)
-    LQRSolution{T}(Q, R, K, S, copy(Vector(x0)), copy(u0), Δt)
-end
-
-(c::LQRSolution)(x) = -c.K * (Vector(x) .- c.x0) .+ c.u0
-
-function zero_element!(sol::LQRSolution, idx::Integer)
-    sol.S[idx, :] .= 0
-    sol.S[:, idx] .= 0
-    sol.K[:, idx] .= 0
-end
-
-
-@with_kw mutable struct MPCParams{S1 <: AbstractMathProgSolver, S2 <: AbstractMathProgSolver}
-    Δt::Float64 = 0.05
-    horizon::Int = 15
-    mip_solver::S1
-    lcp_solver::S2
-end
 
 function nominal_input(x0::MechanismState{X, M}, contacts::AbstractVector{<:Point3D}=Point3D[]) where {X, M}
     # externalwrenches = BodyDict(BodyID(body) => zero(Wrench{X}) for body in bodies(mechanism))
@@ -127,7 +92,7 @@ function run_mpc(x0::MechanismState,
     _, results_opt = LCPSim.optimize(x0, env, params.Δt, params.horizon, model)
     @objective model Min lqr_cost(results_opt, lqr)
 
-    warmstart_costs = run_warmstarts!(model, results_opt, x0, env, params, cost, warmstart_controllers)
+    warmstart_costs = run_warmstarts!(model, results_opt, x0, env, params, r -> lqr_cost(r, lqr), warmstart_controllers)
     ConditionalJuMP.handle_constant_objective!(model)
     try
         solve(model, suppress_warnings=true)
@@ -160,18 +125,17 @@ mutable struct MPCController{T, P <: MPCParams, M <: MechanismState}
     callback::Function
 end
 
-function MPCController(mechanism::Mechanism,
-                       env::Environment,
+function MPCController(model::AbstractModel,
                        params::MPCParams,
                        lqr::LQRSolution,
                        warmstart_controllers::AbstractVector{<:Function})
-    scratch_state = MechanismState{Float64}(mechanism)
+    scratch_state = MechanismState{Float64}(mechanism(model))
     MPCController(scratch_state,
-                  env,
+                  environment(model),
                   params,
                   lqr,
                   convert(Vector{Function}, warmstart_controllers),
-                  r -> nothing)
+                  (state, results) -> nothing)
 end
 
 function (c::MPCController)(x0::Union{MechanismState, LCPSim.StateRecord})
