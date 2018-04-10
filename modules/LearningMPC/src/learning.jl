@@ -100,6 +100,17 @@ function interval_net(widths, activation=Flux.elu)
     net, loss
 end
 
+function log_interval_net(widths, activation=Flux.elu)
+    net = Chain([Dense(widths[i-1], widths[i], activation) for i in 2:length(widths)]..., exp)
+    loss = (x, lb, ub) -> begin
+        loglb = log(lb)
+        logub = log(ub)
+        logy = log(net(x))
+        sum(ifelse.(logy .< loglb, loglb .- logy, ifelse.(logy .> logub, logy .- logub, 0 .* logy)))
+    end
+    net, loss 
+end
+
 struct LearnedCost{T, F1, F2} <: Function
     lqr::LQRSolution{T}
     net::F1

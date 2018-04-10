@@ -1,0 +1,102 @@
+<?xml version="1.0"?>
+
+<robot name="slider">
+    <link name="bar">
+    <visual>
+      <geometry>
+        <box size="30 0.05 0.05"/>
+      </geometry>
+      <origin xyz="0 0 0"/>
+      <material name="green">
+        <color rgba="0 0.8 .8 1"/>
+      </material>
+    </visual>
+    <inertial>
+      <mass value="0"/>
+      <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+    </inertial>
+  </link>
+
+  <link name="cart">
+    <visual>
+      <geometry>
+        <box size="0.5 0.5 0.2"/>
+      </geometry>
+      <origin xyz="0 0 0"/>
+      <material name="blue">
+        <color rgba="0 0 .8 1"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <sphere radius="0"/>
+      </geometry>
+      <origin xyz="0 0 0"/>
+    </collision>
+    <inertial>
+      <mass value="1.0"/>
+      <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+    </inertial>
+  </link>
+
+  <joint name="bar_to_cart" type="prismatic">
+    <axis xyz="1 0 0"/>
+    <origin xyz="0.0 0.0 0.0"/>
+    <parent link="bar"/>
+    <child link="cart"/>
+    <limit effort="1.0" lower="-15" upper="15" velocity="100"/>
+  </joint>
+
+  <link name="left_wall">
+    <visual>
+      <origin xyz="-1.55 0 0"/>
+      <geometry>
+        <box size="0.1 0.5 2.5"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="-1.55 0 0"/>
+      <geometry>
+        <box size="0.1 0.5 2.5"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="-1.5 0 0"/>
+      <geometry>
+        <plane normal="1 0 0"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="bar_to_left_wall" type="fixed">
+    <parent link="bar"/>
+    <child link="left_wall"/>
+  </joint>
+
+  <link name="right_wall">
+    <visual>
+      <origin xyz="1.55 0 0"/>
+      <geometry>
+        <box size="0.1 0.5 2.5"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="1.55 0 0"/>
+      <geometry>
+        <box size="0.1 0.5 2.5"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="1.5 0 0"/>
+      <geometry>
+        <plane normal="-1 0 0"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="bar_to_right_wall" type="fixed">
+    <parent link="bar"/>
+    <child link="right_wall"/>
+  </joint>
+
+</robot>
