@@ -10,6 +10,7 @@ using Gurobi
 export Hopper,
        CartPole,
        BoxAtlas,
+       Slider,
        AbstractModel,
        mechanism,
        environment,
@@ -32,5 +33,6 @@ MeshCatMechanisms.MechanismVisualizer(h::AbstractModel, v::Visualizer=Visualizer
 include("cartpole.jl")
 include("boxatlas.jl")
 include("hopper.jl")
+include("slider.jl")
 
 end

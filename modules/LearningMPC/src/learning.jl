@@ -92,7 +92,7 @@ struct Dataset{T}
 end
 
 function interval_net(widths, activation=Flux.elu)
-    net = Chain([Dense(widths[i-1], widths[i], activation) for i in 2:length(widths)]...)
+    net = Chain([Dense(widths[i-1], widths[i], i==length(widths) ? identity : activation) for i in 2:length(widths)]...)
     loss = (x, lb, ub) -> begin
         y = net(x)
         sum(ifelse.(y .< lb, lb .- y, ifelse.(y .> ub, y .- ub, 0 .* y)))
