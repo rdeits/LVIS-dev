@@ -1,0 +1,94 @@
+<?xml version="1.0"?>
+<robot name="hopper2d">
+  <link name="floor">
+    <visual>
+      <origin xyz="0 0 -0.025"/>
+      <geometry>
+        <box size="4 1 0.05"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 -0.025"/>
+      <geometry>
+        <box size="4 1 0.05"/>
+      </geometry>
+    </collision>
+    <collision>
+      <geometry>
+        <plane normal="0 0 1"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="base_x_dummy">
+  </link>
+
+  <joint name="base_x" type="prismatic">
+    <parent link="floor"/>
+    <child link="base_x_dummy"/>
+    <axis xyz="1 0 0"/>
+    <limit effort="0" velocity="1000" lower="-10" upper="10" />
+  </joint>
+
+  <link name="core">
+    <visual>
+      <geometry>
+        <box size="0.2 0.2 0.2"/>
+      </geometry>
+      <origin xyz="0 0 0"/>
+      <material name="blue">
+        <color rgba="0 0 .8 1"/>
+      </material>
+    </visual>
+    <inertial>
+      <mass value="1.0"/>
+      <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+    </inertial>
+  </link>
+
+  <joint name="base_z" type="prismatic">
+    <parent link="base_x_dummy"/>
+    <child link="core"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="0" velocity="1000" lower="-10" upper="10"/>
+  </joint>
+
+  <link name="foot_x_dummy">
+  </link>
+
+  <joint name="foot_x" type="prismatic">
+    <parent link="core"/>
+    <child link="foot_x_dummy"/>
+    <axis xyz="1 0 0 "/>
+    <limit effort="5" velocity="1000" lower="-0.5" upper="0.5"/>
+  </joint>
+
+  <link name="foot">
+    <visual>
+      <geometry>
+        <box size="0.05 0.05 0.05"/>  
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0.025"/>
+      <material name="white">
+        <color rgba="1 1 1 1"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <sphere radius="0.01"/>
+      </geometry>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+    </collision>
+    <inertial>
+      <mass value="0.1"/>
+      <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+    </inertial>
+  </link>
+
+  <joint name="foot_z" type="prismatic">
+    <axis xyz="0 0 -1"/>
+    <parent link="foot_x_dummy"/>
+    <child link="foot"/>
+    <limit effort="20" lower="0.25" upper="1.0" velocity="1000"/>
+  </joint>
+</robot>

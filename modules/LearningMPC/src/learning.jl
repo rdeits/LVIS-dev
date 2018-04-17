@@ -101,7 +101,7 @@ function interval_net(widths, activation=Flux.elu)
 end
 
 function log_interval_net(widths, activation=Flux.elu)
-    net = Chain([Dense(widths[i-1], widths[i], activation) for i in 2:length(widths)]..., exp)
+    net = Chain([Dense(widths[i-1], widths[i], i==length(widths) ? exp : activation) for i in 2:length(widths)]...)
     loss = (x, lb, ub) -> begin
         loglb = log(lb)
         logub = log(ub)

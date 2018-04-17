@@ -44,7 +44,7 @@ function nominal_state(robot::BoxAtlas)
     xstar
 end
 
-function default_costs(robot::BoxAtlas, r=0.002)
+function default_costs(robot::BoxAtlas, r=0.01)
     x = nominal_state(robot)
 
     qq = zeros(num_positions(x))
@@ -58,7 +58,7 @@ function default_costs(robot::BoxAtlas, r=0.002)
     qq[configuration_range(x, findjoint(x.mechanism, "core_to_rf_rotation"))]  .= 0.1
     qq[configuration_range(x, findjoint(x.mechanism, "core_to_lf_rotation"))]  .= 0.1
 
-    qv = zeros(num_velocities(x))
+    qv = fill(0.01, num_velocities(x))
     qv[velocity_range(x, findjoint(x.mechanism, "floating_base"))] = [10, 1, 50]
 
     Q = diagm(vcat(qq, qv))
@@ -95,11 +95,17 @@ function LearningMPC.MPCParams(robot::BoxAtlas)
         lcp_solver=GurobiSolver(Gurobi.Env(), OutputFlag=0))
 end
 
-function LearningMPC.LQRSolution(robot::BoxAtlas, params::MPCParams=MPCParams(robot))
+function LearningMPC.LQRSolution(robot::BoxAtlas, params::MPCParams=MPCParams(robot), zero_base_x=true)
     xstar = nominal_state(robot)
     Q, R = default_costs(robot)
     lqrsol = LearningMPC.LQRSolution(xstar, Q, R, params.Δt, 
         [Point3D(default_frame(robot.feet[:left]), 0., 0., 0.),
          Point3D(default_frame(robot.feet[:right]), 0., 0., 0.)])
+    if zero_base_x
+        lqrsol.S[1,:] .= 0
+        lqrsol.S[:,1] .= 0
+        lqrsol.K[:,1] .= 0
+    end
+    lqrsol
 end
 
