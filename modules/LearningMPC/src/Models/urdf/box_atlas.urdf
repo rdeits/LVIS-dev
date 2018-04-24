@@ -83,7 +83,13 @@
     </inertial>
     <visual>
       <geometry>
-        <sphere radius="0.025"/>
+        <sphere radius="0.05"/>
+      </geometry>
+    </visual>
+    <visual>
+      <origin xyz="0.1875 0 0" rpy="0 1.5707963267948966 0"/>
+      <geometry>
+        <cylinder radius="0.03" length="0.375"/>
       </geometry>
     </visual>
   </link>
@@ -96,7 +102,13 @@
     </inertial>
     <visual>
       <geometry>
-        <sphere radius="0.05"/>
+        <sphere radius="0.025"/>
+      </geometry>
+    </visual>
+    <visual>
+      <origin xyz="-0.1875 0 0" rpy="0 1.5707963267948966 0"/>
+      <geometry>
+        <cylinder radius="0.02" length="0.375"/>
       </geometry>
     </visual>
     <collision>
@@ -119,7 +131,7 @@
     <child link="rh"/>
     <origin xyz="0 0 0"/>
     <axis xyz="1 0 0"/>
-    <limit lower="0.18" upper="0.75" velocity="100" effort="2"/>
+    <limit lower="0.375" upper="0.75" velocity="100" effort="2"/>
   </joint>
 
   <link name="lh_dummy">
@@ -130,7 +142,13 @@
     </inertial>
     <visual>
       <geometry>
-        <sphere radius="0.025"/>
+        <sphere radius="0.05"/>
+      </geometry>
+    </visual>
+    <visual>
+      <origin xyz="-0.1875 0 0" rpy="0 1.5707963267948966 0"/>
+      <geometry>
+        <cylinder radius="0.03" length="0.375"/>
       </geometry>
     </visual>
   </link>
@@ -143,7 +161,13 @@
     </inertial>
     <visual>
       <geometry>
-        <sphere radius="0.05"/>
+        <sphere radius="0.025"/>
+      </geometry>
+    </visual>
+    <visual>
+      <origin xyz="0.1875 0 0" rpy="0 1.5707963267948966 0"/>
+      <geometry>
+        <cylinder radius="0.02" length="0.375"/>
       </geometry>
     </visual>
     <collision>
@@ -166,7 +190,7 @@
     <child link="lh"/>
     <origin xyz="0 0 0"/>
     <axis xyz="-1 0 0"/>
-    <limit lower="0.18" upper="0.75" velocity="100" effort="2"/>
+    <limit lower="0.375" upper="0.75" velocity="100" effort="2"/>
   </joint>
 
   <link name="rf_dummy">
@@ -177,7 +201,13 @@
     </inertial>
     <visual>
       <geometry>
-        <sphere radius="0.025"/>
+        <sphere radius="0.05"/>
+      </geometry>
+    </visual>
+    <visual>
+      <origin xyz="0 0 -0.225" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.03" length="0.45"/>
       </geometry>
     </visual>
   </link>
@@ -190,7 +220,13 @@
     </inertial>
     <visual>
       <geometry>
-        <sphere radius="0.05"/>
+        <sphere radius="0.025"/>
+      </geometry>
+    </visual>
+    <visual>
+      <origin xyz="0 0 0.225" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.02" length="0.45"/>
       </geometry>
     </visual>
     <collision>
@@ -213,7 +249,7 @@
     <child link="rf"/>
     <origin xyz="0 0 0"/>
     <axis xyz="0 0 -1"/>
-    <limit lower="0.4" upper="0.9" velocity="100" effort="20"/>
+    <limit lower="0.45" upper="0.9" velocity="100" effort="20"/>
   </joint>
 
   <link name="lf_dummy">
@@ -224,7 +260,13 @@
     </inertial>
     <visual>
       <geometry>
-        <sphere radius="0.025"/>
+        <sphere radius="0.05"/>
+      </geometry>
+    </visual>
+    <visual>
+      <origin xyz="0 0 -0.225" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.03" length="0.45"/>
       </geometry>
     </visual>
   </link>
@@ -237,7 +279,13 @@
     </inertial>
     <visual>
       <geometry>
-        <sphere radius="0.05"/>
+        <sphere radius="0.025"/>
+      </geometry>
+    </visual>
+    <visual>
+      <origin xyz="0 0 0.225" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.02" length="0.45"/>
       </geometry>
     </visual>
     <collision>
@@ -260,7 +308,7 @@
     <child link="lf"/>
     <origin xyz="0 0 0"/>
     <axis xyz="0 0 -1"/>
-    <limit lower="0.4" upper="0.9" velocity="100" effort="20"/>
+    <limit lower="0.45" upper="0.9" velocity="100" effort="20"/>
   </joint>
 
 

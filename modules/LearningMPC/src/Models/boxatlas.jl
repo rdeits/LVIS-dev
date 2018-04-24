@@ -44,7 +44,7 @@ function nominal_state(robot::BoxAtlas)
     xstar
 end
 
-function default_costs(robot::BoxAtlas, r=0.01)
+function default_costs(robot::BoxAtlas, r=0.005)
     x = nominal_state(robot)
 
     qq = zeros(num_positions(x))
@@ -53,8 +53,8 @@ function default_costs(robot::BoxAtlas, r=0.01)
     qq[configuration_range(x, findjoint(x.mechanism, "core_to_lh_extension"))]  .= 0.5
     qq[configuration_range(x, findjoint(x.mechanism, "core_to_rh_rotation"))]  .= 0.5
     qq[configuration_range(x, findjoint(x.mechanism, "core_to_lh_rotation"))]  .= 0.5
-    qq[configuration_range(x, findjoint(x.mechanism, "core_to_rf_extension"))]  .= 0.1
-    qq[configuration_range(x, findjoint(x.mechanism, "core_to_lf_extension"))]  .= 0.1
+    qq[configuration_range(x, findjoint(x.mechanism, "core_to_rf_extension"))]  .= 0.5
+    qq[configuration_range(x, findjoint(x.mechanism, "core_to_lf_extension"))]  .= 0.5
     qq[configuration_range(x, findjoint(x.mechanism, "core_to_rf_rotation"))]  .= 0.1
     qq[configuration_range(x, findjoint(x.mechanism, "core_to_lf_rotation"))]  .= 0.1
 
