@@ -7,3 +7,6 @@
 [submodule "submodules/LearningMPC"]
 	path = submodules/LearningMPC
 	url = git@github.com:rdeits/LearningMPC.jl
+[submodule "submodules/FluxExtensions"]
+	path = submodules/FluxExtensions
+	url = git@github.com:rdeits/FluxExtensions.jl
