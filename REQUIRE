@@ -24,3 +24,4 @@ RigidBodyDynamics 0.5
 StaticArrays 0.6.0
 DataFrames
 Query
+Blink
