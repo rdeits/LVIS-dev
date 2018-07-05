@@ -1,9 +1,6 @@
 [submodule "submodules/LCPSim"]
 	path = submodules/LCPSim
 	url = git@github.com:rdeits/LCPSim.jl
-[submodule "submodules/RoguePkg"]
-	path = submodules/RoguePkg
-	url = git@github.com:tpapp/RoguePkg.jl.git
 [submodule "submodules/LearningMPC"]
 	path = submodules/LearningMPC
 	url = git@github.com:rdeits/LearningMPC.jl
