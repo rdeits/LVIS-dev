@@ -5,6 +5,9 @@ packages/v0.6/*
 !packages/v0.6/Nets
 !packages/v0.6/OSQP
 !packages/v0.6/SimpleQP
+!packages/v0.6/MeshCat
+!packages/v0.6/MeshCatMechanisms
+!packages/v0.6/RigidBodyDynamics
 !packages/v0.6/REQUIRE
 *-checkpoint.ipynb
 **/*-checkpoint.ipynb

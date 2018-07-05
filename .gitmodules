@@ -16,3 +16,12 @@
 [submodule "packages/v0.6/SimpleQP"]
 	path = packages/v0.6/SimpleQP
 	url = git@github.com:tkoolen/SimpleQP.jl
+[submodule "packages/v0.6/MeshCat"]
+	path = packages/v0.6/MeshCat
+	url = https://github.com/rdeits/MeshCat.jl
+[submodule "packages/v0.6/MeshCatMechanisms"]
+	path = packages/v0.6/MeshCatMechanisms
+	url = https://github.com/JuliaRobotics/MeshCatMechanisms.jl
+[submodule "packages/v0.6/RigidBodyDynamics"]
+	path = packages/v0.6/RigidBodyDynamics
+	url = https://github.com/JuliaRobotics/RigidBodyDynamics.jl
