@@ -25,3 +25,6 @@
 [submodule "packages/v0.6/RigidBodyDynamics"]
 	path = packages/v0.6/RigidBodyDynamics
 	url = https://github.com/JuliaRobotics/RigidBodyDynamics.jl
+[submodule "packages/v0.6/QPControl"]
+	path = packages/v0.6/QPControl
+	url = git@github.com:tkoolen/QPControl.jl
