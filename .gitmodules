@@ -1,11 +1,11 @@
 [submodule "submodules/LCPSim"]
-	path = submodules/LCPSim
+	path = packages/v0.6/LCPSim
 	url = git@github.com:rdeits/LCPSim.jl
 [submodule "submodules/LearningMPC"]
-	path = submodules/LearningMPC
+	path = packages/v0.6/LearningMPC
 	url = git@github.com:rdeits/LearningMPC.jl
 [submodule "submodules/FluxExtensions"]
-	path = submodules/FluxExtensions
+	path = packages/v0.6/FluxExtensions
 	url = git@github.com:rdeits/FluxExtensions.jl
 [submodule "packages/v0.6/OSQP"]
 	path = packages/v0.6/OSQP

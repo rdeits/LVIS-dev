@@ -9,6 +9,9 @@ packages/v0.6/*
 !packages/v0.6/MeshCat
 !packages/v0.6/MeshCatMechanisms
 !packages/v0.6/RigidBodyDynamics
+!packages/v0.6/FluxExtensions
+!packages/v0.6/LCPSim
+!packages/v0.6/LearningMPC
 !packages/v0.6/REQUIRE
 *-checkpoint.ipynb
 **/*-checkpoint.ipynb
