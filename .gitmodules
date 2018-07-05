@@ -10,3 +10,9 @@
 [submodule "submodules/FluxExtensions"]
 	path = submodules/FluxExtensions
 	url = git@github.com:rdeits/FluxExtensions.jl
+[submodule "packages/v0.6/OSQP"]
+	path = packages/v0.6/OSQP
+	url = git@github.com:oxfordcontrol/OSQP.jl
+[submodule "packages/v0.6/SimpleQP"]
+	path = packages/v0.6/SimpleQP
+	url = git@github.com:tkoolen/SimpleQP.jl
