@@ -5,6 +5,7 @@ packages/v0.6/*
 
 # packages managed as submodules
 !packages/v0.6/FluxExtensions
+!packages/v0.6/IKMimic
 !packages/v0.6/LCPSim
 !packages/v0.6/LearningMPC
 !packages/v0.6/MeshCat
