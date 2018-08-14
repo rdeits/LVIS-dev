@@ -1,5 +1,4 @@
 BenchmarkTools
-Cbc
 ConditionalJuMP 0.0.2
 Flux 0.5
 ForwardDiff
@@ -25,3 +24,4 @@ Blink
 AtlasRobot
 RigidBodySim
 PkgDev
+ValkyrieRobot
