@@ -19,3 +19,4 @@ packages/v0.6/*
 !packages/v0.6/REQUIRE
 *-checkpoint.ipynb
 **/*-checkpoint.ipynb
+.ipynb_checkpoints

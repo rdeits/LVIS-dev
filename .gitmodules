@@ -10,9 +10,6 @@
 [submodule "packages/v0.6/OSQP"]
 	path = packages/v0.6/OSQP
 	url = git@github.com:oxfordcontrol/OSQP.jl
-[submodule "packages/v0.6/SimpleQP"]
-	path = packages/v0.6/SimpleQP
-	url = git@github.com:tkoolen/SimpleQP.jl
 [submodule "packages/v0.6/MeshCat"]
 	path = packages/v0.6/MeshCat
 	url = https://github.com/rdeits/MeshCat.jl
