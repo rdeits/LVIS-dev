@@ -1,29 +1,27 @@
+AtlasRobot 0.1.0
 BenchmarkTools
+Blink 0.7.0
 ConditionalJuMP 0.0.2
+DataFrames
 Flux 0.5
-ForwardDiff
+ForwardDiff 0.7.5
 GeometryTypes 0.4.0
+GLPK 0.8.0 0.9
 GR
 Gurobi 0.3.2
 IJulia 1.5.0
-JLD2
-JuMP 0.17.1
-MeshCat
-MeshCatMechanisms
+JLD2 0.0.6
+JuMP 0.18.2 0.19
+MeshCat 0.2.3 0.3
+MeshCatMechanisms 0.1.1 0.2
+OSQP 0.3.1 0.4
 MLDataPattern 0.1.0
 Parameters 0.7.2
 Plots 0.12.0
-ProfileView
 ProgressMeter 0.3.4
+PyPlot
 ReverseDiff 0.2
 Revise
 RigidBodyDynamics 0.5
 StaticArrays 0.6.0
-DataFrames
-Blink
-AtlasRobot
-RigidBodySim
-PkgDev
-ValkyrieRobot
-GLPK
-PyPlot
+RigidBodySim 1.0
