@@ -7,7 +7,9 @@ This package includes the experimental implementation and development files asso
 * Install Julia v0.6.4 from <https://julialang.org/downloads/oldreleases.html> and add it to your PATH as `julia-0.6`.
 * Install the necessary julia packages with:
 
-    ./setup.sh
+```
+./setup.sh
+```
 
 ## Usage
 
