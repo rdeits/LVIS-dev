@@ -10,3 +10,6 @@
 [submodule "packages/v0.6/QPControl"]
 	path = packages/v0.6/QPControl
 	url = https://github.com/tkoolen/QPControl.jl
+[submodule "packages/v0.6/IKMimic"]
+	path = packages/v0.6/IKMimic
+	url = https://github.com/rdeits/IKMimic.jl
