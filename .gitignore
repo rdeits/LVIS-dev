@@ -1,0 +1,22 @@
+packages/.cache
+packages/lib
+packages/v0.5
+packages/v0.6/*
+
+# packages managed as submodules
+!packages/v0.6/FluxExtensions
+!packages/v0.6/IKMimic
+!packages/v0.6/LCPSim
+!packages/v0.6/LearningMPC
+!packages/v0.6/MeshCat
+!packages/v0.6/MeshCatMechanisms
+!packages/v0.6/Nets
+!packages/v0.6/OSQP
+!packages/v0.6/Parametron
+!packages/v0.6/QPControl
+!packages/v0.6/RigidBodyDynamics
+
+!packages/v0.6/REQUIRE
+*-checkpoint.ipynb
+**/*-checkpoint.ipynb
+.ipynb_checkpoints

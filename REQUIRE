@@ -1,0 +1,29 @@
+BenchmarkTools
+ConditionalJuMP 0.0.2
+Flux 0.5
+ForwardDiff
+GeometryTypes 0.4.0
+GR
+Gurobi 0.3.2
+IJulia 1.5.0
+JLD2
+JuMP 0.17.1
+MeshCat
+MeshCatMechanisms
+MLDataPattern 0.1.0
+Parameters 0.7.2
+Plots 0.12.0
+ProfileView
+ProgressMeter 0.3.4
+ReverseDiff 0.2
+Revise
+RigidBodyDynamics 0.5
+StaticArrays 0.6.0
+DataFrames
+Blink
+AtlasRobot
+RigidBodySim
+PkgDev
+ValkyrieRobot
+GLPK
+PyPlot
