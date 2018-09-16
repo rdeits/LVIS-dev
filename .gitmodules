@@ -1,0 +1,12 @@
+[submodule "packages/v0.6/LCPSim"]
+	path = packages/v0.6/LCPSim
+	url = https://github.com/rdeits/LCPSim.jl
+[submodule "packages/v0.6/LearningMPC"]
+	path = packages/v0.6/LearningMPC
+	url = https://github.com/rdeits/LearningMPC.jl
+[submodule "packages/v0.6/FluxExtensions"]
+	path = packages/v0.6/FluxExtensions
+	url = https://github.com/rdeits/FluxExtensions.jl
+[submodule "packages/v0.6/QPControl"]
+	path = packages/v0.6/QPControl
+	url = https://github.com/tkoolen/QPControl.jl
